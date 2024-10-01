@@ -1,0 +1,26 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+var hostname string
+var port int
+
+func main() {
+	// Show file and line number in logs
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
+	hostname = "127.0.0.1"
+	port = 5000
+
+	http.HandleFunc("/", index)
+	log.Printf("Running on http://%s:%d (Press CTRL+C to quit)", hostname, port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+}
+
+func index(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "<h1>Hello world</h1>")
+}
