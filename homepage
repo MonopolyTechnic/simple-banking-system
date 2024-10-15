@@ -8,7 +8,19 @@
 </head>
 
 <body>
-    <h1>Monopoly-Technic</h1>
-    <h2>The one stop shop for all your banking website needs</h2>
+    <div class="centered-div">
+        <h1>Monopoly-Technic</h1>
+        <h2>The one stop shop for all your banking website needs</h2>
+        <div class="bottomerdiv">
+            <div class="button-container">
+                <button>User Login</button>
+                <p class="buttonprompt">Click here to login as user</p>
+            </div>
+            <div class="button-container">
+                <button>Employee Login</button>
+                <p class="buttonprompt">Click here to login as employee</p>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
