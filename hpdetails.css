@@ -1,69 +1,48 @@
 body {
-    background-color: #f2f2f2;
-    font-family: Arial, sans-serif;
-    background-image: url("images/falling-money.webp");
-  }
-  
-  h1 {
-    text-align: center;
-    font-size: 36px;
-  }
-
-  h2 {
-    text-align: center;
-    font-style: italic;
-  }
-  
-  p {
-    margin-bottom: 20px;
-  }
-
-  .button-container {
-    /* Add some basic styling */
-    display: inline-block;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    cursor: pointer;
-    width: 90%;
     display: flex;
-    align-items: center; /* Aligns items vertically */
-  }
-  
-  button {
-    /* Style the button */
-    background-color: #527744;
-    color: #fff;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  .buttonprompt {
-    /* Style the text */
-    font-size: 16px;
-    font-weight: bold;
-    margin-left: 10px;
-  }
-
-  .centered-div {
-    background-color: #ccc;
-    border-radius: 25px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 10px;
-    height: 70%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Full viewport height */
+    margin: -10% 0 0 0; /* Move body up by 30% */
+    text-align: center; /* Center text */
 }
-.bottomerdiv {
-    background-color: #ccc;
-    border-radius: 25px;
-    position: absolute;
-    top: 75%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 10px;
-    height: 50%;
+
+.center {
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
+}
+
+.button-container {
+    margin: 10px 0; /* Add spacing between buttons */
+}
+
+img {
+    max-width: 100%; /* Ensure it doesn't exceed the container's width */
+    height: auto; /* Maintain aspect ratio */
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
+    width: 50%;
+}
+
+.button {
+    border-radius: 10px;
+    background-color: #545F71;
+    color: white;
+    border: 2px solid #e7e7e7;
+    padding: 0px 0px; /* Adjust padding to increase button size */
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    width: 135px;
+    height: 45px;
+    font-size: 16px;
+}
+
+.button:hover {background-color: #e7e7e7;}
+
+h1 {
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    color: #545F71;
+    font-weight: 700;
 }

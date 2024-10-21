@@ -8,7 +8,9 @@
 </head>
 
 <body>
+
     <div class="centered-div">
+        <img src="images/piggybank.jpg" alt="piggybank">
         <h1>Monopoly-Technic</h1>
         <h2>The one stop shop for all your banking website needs</h2>
         <div class="bottomerdiv">
