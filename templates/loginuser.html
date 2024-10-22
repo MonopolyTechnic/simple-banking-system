@@ -3,21 +3,24 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="stylesheet" href="hpdetails.css"> <!-- Link to your CSS -->
+    <link rel="stylesheet" href="../static/style.css"> <!-- Link to your CSS -->
     <title>Monopoly-Technic</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
     <div class="centertextleft">
-        <h1 class="h1smaller">Forgot password?</h1>
-        <p>Enter your email and we will send you a link to reset your password.</p>
+        <h1>Welcome!</h1>
+        <p>Login below or <a href="accountcreation.html">create an account</a></p>
     </div>
     <form action="/getemail" method="POST">
         <label for="email">Email</label>
         <input type="email" id="email" name="email" required>
-        <div class="smallerbuttoncenter">
-            <input type="submit" value="Send Code">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+        <div class="buttoncenter">
+            <input type="submit" value="Sign in">
+            <p><b><a href="forgotpassword.html">Forgot Password</a></b></p>
         </div>
     </form>
 </body>
