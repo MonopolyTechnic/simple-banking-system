@@ -59,13 +59,13 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	// Read from db
 	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
-		rows, _ := conn.Query(context.Background(), "SELECT * FROM test")
-		res, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Test])
+		rows, _ := conn.Query(context.Background(), "SELECT * FROM employees")
+		res, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Employee])
 		handle(err, "CollectRows failed")
 
 		// Print out each row and its values
 		for _, r := range res {
-			fmt.Printf("%s, %d\n", r.Col1, r.Col2)
+			fmt.Printf("%v\n", r)
 		}
 		fmt.Println(len(res))
 		return nil
