@@ -76,9 +76,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(len(res))
 		return nil
 	})
-	if err != nil {
-		panic(err)
-	}
+	handle(err)
 
 	http.ServeFile(w, r, "./templates/index.html")
 }
