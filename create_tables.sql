@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS employees(
                         NOT NULL
     ,phone_number       VARCHAR(10)
                         NOT NULL
+    ,phone_carrier      VARCHAR(16)
+                        NOT NULL
     ,password_hash      BYTEA
                         NOT NULL
 );
