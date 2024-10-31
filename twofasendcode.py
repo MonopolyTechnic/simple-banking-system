@@ -69,6 +69,8 @@ def sendcode(phone_number, phone_carrier):
         server.starttls()  # Upgrade the connection to secure
         server.login(email_sender, email_password)
         server.sendmail(email_sender, recipient_sms, message.as_string())
+    
+    print(verification_code)
 
 
 if __name__ == "__main__":
