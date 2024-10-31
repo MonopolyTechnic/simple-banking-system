@@ -5,7 +5,7 @@ import "time"
 type Employee struct {
 	Id             int
 	FirstName      string
-	MiddleName     *string // must be nullable type
+	MiddleName     string // must be nullable type
 	LastName       string
 	Email          string
 	DOB            time.Time
