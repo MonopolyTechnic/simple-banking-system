@@ -57,20 +57,21 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read from db
+	// A sample read from db
 	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
-		rows, _ := conn.Query(context.Background(), "SELECT firstname, lastname FROM employees")
+		rows, _ := conn.Query(context.Background(), "SELECT first_name, last_name FROM employees")
 		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Employee])
 		handle(err, "CollectRows failed")
 
 		// Print out each row and its values
 		for _, r := range res {
 			fmt.Println(r.Id)
-			fmt.Println(r.FirstName)
-			fmt.Println(r.MiddleName)
-			fmt.Println(r.LastName)
-			fmt.Println(r.DOB)
-			fmt.Println(r.PasswordHash)
+			fmt.Println(r.FirstName.String)
+			fmt.Println(r.MiddleName.String)
+			fmt.Println(r.LastName.String)
+			fmt.Println(r.BillingAddress.String)
+			fmt.Println(r.DateOfBirth.Time)
+			fmt.Println(r.PasswordHash.Bytes)
 		}
 		fmt.Println(len(res))
 		return nil
