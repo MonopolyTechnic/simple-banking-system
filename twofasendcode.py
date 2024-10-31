@@ -24,14 +24,14 @@ def sendcode(phone_number, phone_carrier):
         "US Cellular": "email.uscc.net",
         "Page Plus Cellular": "vtext.com",  # Uses Verizon's gateway
         "TracFone": "mmst5.tracfone.com",
-        "Rogers (Canada)": "txt.bell.ca",
-        "Bell (Canada)": "txt.bell.ca",
-        "Telus (Canada)": "msg.telus.com",
-        "Vodafone (UK)": "vodafone.net",
-        "O2 (UK)": "o2.co.uk",
-        "Orange (UK)": "orange.net",
-        "Telenor (Norway)": "telenor.no",
-        "Telia (Sweden)": "telia.se",
+        "Rogers": "txt.bell.ca",
+        "Bell": "txt.bell.ca",
+        "Telus": "msg.telus.com",
+        "Vodafone": "vodafone.net",
+        "O2": "o2.co.uk",
+        "Orange": "orange.net",
+        "Telenor": "telenor.no",
+        "Telia": "telia.se",
     }
 
     # Recipient phone number and carrier (change based on the recipient's carrier)
