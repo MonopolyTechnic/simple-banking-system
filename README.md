@@ -16,5 +16,5 @@ A simple banking system template that can be used by banks.
 10. Create a `.env` file and fill in values like in `.env.example`
 
 ### Run the webserver
-1. Run `go run main.go`
+1. Run `go run .`
 2. The server should be up on port 5000!
