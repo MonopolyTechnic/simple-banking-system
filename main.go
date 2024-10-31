@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/MonopolyTechnic/simple-banking-system/models"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -14,11 +16,6 @@ import (
 var host string
 var port string
 var env map[string]string = readEnv(".env")
-
-type Test struct {
-	Col1 string
-	Col2 int
-}
 
 func main() {
 	// Show file and line number in logs
@@ -63,7 +60,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	// Read from db
 	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
 		rows, _ := conn.Query(context.Background(), "SELECT * FROM test")
-		res, err := pgx.CollectRows(rows, pgx.RowToStructByName[Test])
+		res, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Test])
 		handle(err, "CollectRows failed")
 
 		// Print out each row and its values
