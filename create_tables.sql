@@ -1,7 +1,3 @@
-CREATE TABLE IF NOT EXISTS test(
-    col1 VARCHAR(255),
-    col2 INT
-);
 CREATE TABLE IF NOT EXISTS employees(
     id              INT
                     NOT NULL
