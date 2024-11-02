@@ -6,21 +6,56 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/gorilla/sessions"
+	"crypto/tls"
 	"bytes"
+	"math/rand"
+	"net/smtp"
 	"time"
+	"mime/multipart"
+	"net"
+	"io"
+	"errors"
 )
 
 var (
 	host      string
 	port      string
-	env       map[string]string = readEnv(".env")
+	env       map[string]string = readEnv("dbinfo.env")
 	store     = sessions.NewCookieStore([]byte("your-secret-key")) // Change this to a secure key
+	smsGateways = map[string]string{
+		"AT&T":             "txt.att.net",
+		"T-Mobile":        "tmomail.net",
+		"Verizon":         "vtext.com",
+		"Sprint":          "sprintpcs.com",
+		"Cricket":         "mms.cricketwireless.net",
+		"Boost Mobile":    "myboostmobile.com",
+		"MetroPCS":        "mymetropcs.com",
+		"US Cellular":     "email.uscc.net",
+		"Page Plus Cellular": "vtext.com", // Uses Verizon's gateway
+		"TracFone":       "mmst5.tracfone.com",
+		"Rogers":         "txt.bell.ca",
+		"Bell":           "txt.bell.ca",
+		"Telus":          "msg.telus.com",
+		"Vodafone":       "vodafone.net",
+		"O2":             "o2.co.uk",
+		"Orange":         "orange.net",
+		"Telenor":        "telenor.no",
+		"Telia":          "telia.se",
+	}
 )
+
+const (
+	smtpServer   = "smtp.gmail.com"
+	smtpPort     = "587"
+	emailSender  = "monopolytechnic@gmail.com"
+	emailPassword = "vqdh iwfp cnwf iioh" // App password
+	imagePath    = "static/images/piggybank.jpg"
+)
+
 
 func main() {
 	// Show file and line number in logs
@@ -92,6 +127,132 @@ func login(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h1>Login</h1>")
 }
 
+func SendCode(phoneNumber, phoneCarrier string) (int, error) {
+    carrierGateway, exists := smsGateways[phoneCarrier]
+    if !exists {
+        return 0, fmt.Errorf("unsupported carrier: %s", phoneCarrier)
+    }
+
+    recipientSMS := fmt.Sprintf("%s@%s", phoneNumber, carrierGateway)
+
+    // Generate a random 6-digit verification code
+    rand.Seed(time.Now().UnixNano())
+    verificationCode := rand.Intn(900000) + 100000
+
+    // Create a multipart message
+    var buffer bytes.Buffer
+    writer := multipart.NewWriter(&buffer)
+
+    // Write the message part
+    message := fmt.Sprintf("Subject: Verification Code\n\nYour verification code is: %d", verificationCode)
+    textPart, err := writer.CreateFormField("text")
+    if err != nil {
+        return 0, fmt.Errorf("could not create text part: %v", err)
+    }
+    if _, err := textPart.Write([]byte(message)); err != nil {
+        return 0, fmt.Errorf("could not write message: %v", err)
+    }
+	// Add the image part
+	imageFile, err := os.Open(imagePath)
+	if err != nil {
+		return 0, fmt.Errorf("could not open image file: %v", err)
+	}
+	defer imageFile.Close()
+
+	imagePart, err := writer.CreateFormFile("image", "piggybank.jpg")
+	if err != nil {
+		return 0, fmt.Errorf("could not create image part: %v", err)
+	}
+	if _, err := io.Copy(imagePart, imageFile); err != nil {
+		return 0, fmt.Errorf("could not write image to part: %v", err)
+	}
+    // Close the writer to finalize the multipart message
+    if err := writer.Close(); err != nil {
+        return 0, fmt.Errorf("could not close writer: %v", err)
+    }
+
+    // Set up SMTP connection
+    conn, err := net.Dial("tcp", "smtp.gmail.com:587")
+    if err != nil {
+        return 0, fmt.Errorf("could not connect to SMTP server: %v", err)
+    }
+
+    // Create SMTP client
+    host := "smtp.gmail.com"
+    c, err := smtp.NewClient(conn, host)
+    if err != nil {
+        return 0, fmt.Errorf("could not create SMTP client: %v", err)
+    }
+
+    // Upgrade to TLS
+    tlsConfig := &tls.Config{
+        ServerName: host,
+    }
+    if err := c.StartTLS(tlsConfig); err != nil {
+        return 0, fmt.Errorf("could not start TLS: %v", err)
+    }
+
+    // Authenticate using AUTH LOGIN
+    auth := LoginAuth(emailSender, emailPassword)
+    if err := c.Auth(auth); err != nil {
+        return 0, fmt.Errorf("could not authenticate: %v", err)
+    }
+
+    // Set the sender and recipient
+    if err := c.Mail(emailSender); err != nil {
+        return 0, fmt.Errorf("could not set sender: %v", err)
+    }
+    if err := c.Rcpt(recipientSMS); err != nil {
+        return 0, fmt.Errorf("could not set recipient: %v", err)
+    }
+
+    // Send the email
+    w, err := c.Data()
+    if err != nil {
+        return 0, fmt.Errorf("could not send data: %v", err)
+    }
+    if _, err := w.Write(buffer.Bytes()); err != nil {
+        return 0, fmt.Errorf("could not write to SMTP: %v", err)
+    }
+    if err := w.Close(); err != nil {
+        return 0, fmt.Errorf("could not close SMTP connection: %v", err)
+    }
+
+    c.Quit()
+
+    return verificationCode, nil
+}
+
+// Define AUTH LOGIN
+type loginAuth struct {
+    username, password string
+}
+
+func LoginAuth(username, password string) smtp.Auth {
+    return &loginAuth{username, password}
+}
+
+func (a *loginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+    return "LOGIN", []byte(a.username), nil
+}
+
+func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
+    if more {
+        switch string(fromServer) {
+        case "Username:":
+            return []byte(a.username), nil
+        case "Password:":
+            return []byte(a.password), nil
+        default:
+            return nil, errors.New("unknown from server")
+        }
+    }
+    return nil, nil
+}
+
+
+
+
 func twofa(w http.ResponseWriter, r *http.Request) {
 	// Get the session
 	session, err := store.Get(r, "session-name")
@@ -103,16 +264,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		phone_number := r.URL.Query().Get("phone_number") // Assuming phone number is passed as a query parameter
 		phone_carrier := r.URL.Query().Get("phone_carrier")
-
-		var out bytes.Buffer
-		cmd := exec.Command("python3", "twofasendcode.py", phone_number, phone_carrier)
-		cmd.Stdout = &out
-		err := cmd.Run()
-		if err != nil {
-			http.Error(w, "Failed to send code", http.StatusInternalServerError)
-			return
-		}
-		actualCode := out.String()
+		actualCode, err := SendCode(phone_number, phone_carrier)
 		session.Values["actualCode"] = actualCode // Store the code in the session
 		err = session.Save(r, w) // Save the session
 		if err != nil {
