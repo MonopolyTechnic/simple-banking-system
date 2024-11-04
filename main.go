@@ -59,7 +59,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	// A sample read from db
 	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
-		rows, _ := conn.Query(context.Background(), "SELECT first_name, last_name FROM employees")
+		rows, _ := conn.Query(context.Background(), "SELECT * FROM online_profiles WHERE profile_type = 'employee'")
 		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Employee])
 		handle(err, "CollectRows failed")
 
