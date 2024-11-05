@@ -1,0 +1,144 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column; /* Stack header and content vertically */
+    height: 100vh;
+}
+
+h1 {
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    color: #545F71;
+    font-weight: 750;
+    font-size: 48px;
+    line-height: 75%;
+}
+
+
+header {
+    display: flex; 
+    align-items: center;
+    justify-content: space-between; 
+    background-color: #D2D6F0;
+    color: white;
+    padding: 0px; /*maybe change?*/
+    height: 33vh;
+    align-items: stretch;
+    flex-direction: column;
+}
+
+button{
+    color: white;
+    background-color: #545F71;
+    height: 60%;
+    width: 60%;
+}
+
+form{
+    display: flex;
+}
+
+
+.heading_medium {
+    font-size: 2.5rem; 
+    font-weight: bold;
+}
+
+.black_text{
+    color: black;
+}
+
+.top_header {
+    display: flex;
+    flex-direction: row;
+    flex: 2;
+}
+
+.leftheader{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.middleheader{
+  flex: 6;
+  display: flex;
+  flex-direction: column; 
+  text-align: center;
+
+}
+
+.rightheader{
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end; 
+}
+
+.bottom_header{
+    display: flex;
+    flex: 1;
+    margin: 0% 2% 0% 2%;
+}
+
+ul{
+    list-style-type: none;
+    margin: 0;
+}
+
+.center {
+    padding: 0; 
+    margin: 0;
+    text-align: center;
+}
+
+.content {
+    display: flex; 
+    flex: 1; 
+}
+
+.small_row {
+    flex: 1; 
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+    min-height: 100px;
+}
+
+.med_row {
+    flex: 2; 
+    background-color: #ddd;
+}
+
+.margined_container{
+    margin: 0% 2% 0% 2%;
+    flex: 1;
+}
+.small_box{
+    flex: .5;
+}
+.box {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.button_box {
+    display: flex;
+    border: 1px solid black;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    height: 50%;
+    width: 50%;
+}
+
+.no_margin{
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+
