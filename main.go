@@ -105,19 +105,18 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	// A sample read from db
 	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
-		rows, _ := conn.Query(context.Background(), "SELECT first_name, last_name FROM employees")
-		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Employee])
+		rows, _ := conn.Query(context.Background(), "SELECT * FROM accounts WHERE primary_customer_id = 3")
+		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Account])
 		handle(err, "CollectRows failed")
 
 		// Print out each row and its values
+		var f float64
 		for _, r := range res {
-			fmt.Println(r.Id)
-			fmt.Println(r.FirstName.String)
-			fmt.Println(r.MiddleName.String)
-			fmt.Println(r.LastName.String)
-			fmt.Println(r.BillingAddress.String)
-			fmt.Println(r.DateOfBirth.Time)
-			fmt.Println(r.PasswordHash.Bytes)
+			fmt.Println(r.AccountNumber.String)
+			fmt.Println(r.PrimaryCustomerID.Int)
+			fmt.Println(r.SecondaryCustomerID.Int)
+			r.Balance.AssignTo(&f)
+			fmt.Println(f)
 		}
 		fmt.Println(len(res))
 		return nil

@@ -1,9 +1,12 @@
-CREATE TABLE IF NOT EXISTS employees(
+CREATE TABLE IF NOT EXISTS profiles(
     id                  INT
                         NOT NULL
                         PRIMARY KEY
                         GENERATED ALWAYS AS IDENTITY  -- Starts at 1 and increases by 1 for each new row
                         CHECK (id > 0)  -- Check to make sure the id > 0 on every insert/update
+    ,profile_type       CHAR(8)
+                        NOT NULL
+                        CHECK (profile_type IN ('employee', 'customer'))
     ,first_name         VARCHAR(64)
                         NOT NULL
     ,middle_name        VARCHAR(64)
@@ -11,14 +14,42 @@ CREATE TABLE IF NOT EXISTS employees(
                         NOT NULL
     ,email              VARCHAR(128)
                         NOT NULL
+                        UNIQUE
     ,date_of_birth      DATE
                         NOT NULL
     ,billing_address    VARCHAR(256)
                         NOT NULL
     ,phone_number       VARCHAR(10)
                         NOT NULL
-    ,phone_carrier      VARCHAR(16)
+                        UNIQUE
+    ,phone_carrier      VARCHAR(32)
                         NOT NULL
     ,password_hash      BYTEA
                         NOT NULL
+);
+CREATE TABLE IF NOT EXISTS accounts(
+    account_num             CHAR(16)
+                            NOT NULL
+                            PRIMARY KEY
+    ,primary_customer_id    INT
+                            NOT NULL
+                            CHECK (
+                                secondary_customer_id IS NULL OR
+                                primary_customer_id <> secondary_customer_id
+                            )
+    ,secondary_customer_id  INT
+                            CHECK (
+                                secondary_customer_id IS NULL OR
+                                primary_customer_id <> secondary_customer_id
+                            )
+    ,account_type           VARCHAR(8)
+                            NOT NULL
+                            CHECK (account_type IN ('checking', 'savings'))
+    ,balance                NUMERIC(15, 2)  -- 15 digits, with 2 of those being after the decimal
+                            NOT NULL
+                            CHECK (balance >= 0)
+    ,FOREIGN KEY (primary_customer_id)
+        REFERENCES profiles(id)
+    ,FOREIGN KEY (secondary_customer_id)
+        REFERENCES profiles(id)
 );
