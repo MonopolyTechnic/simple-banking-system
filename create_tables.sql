@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS online_profiles(
+CREATE TABLE IF NOT EXISTS profiles(
     id                  INT
                         NOT NULL
                         PRIMARY KEY

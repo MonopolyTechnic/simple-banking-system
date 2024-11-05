@@ -4,7 +4,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
-type Employee struct {
+type Profile struct {
 	Id             int
 	ProfileType    pgtype.Text `db:"profile_type"`
 	FirstName      pgtype.Text `db:"first_name"`
