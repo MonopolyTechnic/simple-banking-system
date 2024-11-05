@@ -134,6 +134,17 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./templates/forgotpassword.html")
 }
 
+func getEmail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// authenticate user login here
+
+	http.Redirect(w, r, "/twofa", http.StatusSeeOther)
+}
+
 func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./templates/postresetpassword.html")
 }
