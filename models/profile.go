@@ -4,6 +4,7 @@ import (
 	"github.com/jackc/pgx/pgtype"
 )
 
+// Represents a Profile (online account) and its data
 type Profile struct {
 	Id             int
 	ProfileType    pgtype.Text `db:"profile_type"`

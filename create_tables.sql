@@ -27,3 +27,29 @@ CREATE TABLE IF NOT EXISTS profiles(
     ,password_hash      BYTEA
                         NOT NULL
 );
+CREATE TABLE IF NOT EXISTS accounts(
+    account_num             CHAR(16)
+                            NOT NULL
+                            PRIMARY KEY
+    ,primary_customer_id    INT
+                            NOT NULL
+                            CHECK (
+                                secondary_customer_id IS NULL OR
+                                primary_customer_id <> secondary_customer_id
+                            )
+    ,secondary_customer_id  INT
+                            CHECK (
+                                secondary_customer_id IS NULL OR
+                                primary_customer_id <> secondary_customer_id
+                            )
+    ,account_type           VARCHAR(8)
+                            NOT NULL
+                            CHECK (account_type IN ('checking', 'savings'))
+    ,balance                NUMERIC(15, 2)  -- 15 digits, with 2 of those being after the decimal
+                            NOT NULL
+                            CHECK (balance >= 0)
+    ,FOREIGN KEY (primary_customer_id)
+        REFERENCES profiles(id)
+    ,FOREIGN KEY (secondary_customer_id)
+        REFERENCES profiles(id)
+);
