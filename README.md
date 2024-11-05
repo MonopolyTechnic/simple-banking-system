@@ -18,3 +18,9 @@ A simple banking system template that can be used by banks.
 ### Run the webserver
 1. Run `go run .`
 2. The server should be up on port 5000!
+
+
+### Adding an Employee
+These steps should be done after running the webserver at least once.
+1. Connect to the database using `psql -h localhost -p 5432 -U postgres -d banking`. Make sure you run this in the base directory of the project.
+2. Run `\i create_employee.sql`. Enter all the values when prompted. A value in parenthesis indicates the default value if left empty.
