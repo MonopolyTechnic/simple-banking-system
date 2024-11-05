@@ -86,6 +86,8 @@ func main() {
 	http.HandleFunc("/login-user", loginUser)
 	http.HandleFunc("/forgot-password", forgotPassword)
 	http.HandleFunc("/forgot-password-sent", forgotPasswordSent)
+	http.HandleFunc("/callback", callback)
+	http.HandleFunc("/verify-code", verifyCode)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
@@ -134,15 +136,27 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./templates/forgotpassword.html")
 }
 
-func getEmail(w http.ResponseWriter, r *http.Request) {
+func callback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// authenticate user login here
+	// TODO: authenticate user login here
 
 	http.Redirect(w, r, "/twofa", http.StatusSeeOther)
+}
+
+func verifyCode(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// TODO: authenticate code here
+
+	// TODO: redirect to employee or user based on the user (or have separate endpoints)
+	http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 }
 
 func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
