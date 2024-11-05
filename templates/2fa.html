@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" href="../static/style.css"> <!-- Link to your CSS -->
+    <title>Monopoly-Technic - 2FA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div class="centertextleft">
+        <h1>Two-Factor Authentication</h1>
+        <p>Please enter the code sent to your phone:</p>
+    </div>
+    <form action="/verify-code" method="POST">
+        <label for="code">Authentication Code</label>
+        <input type="text" id="code" name="code" required maxlength="6" placeholder="123456" class="auth-code-input">
+        <div class="button-container">
+            <input type="submit" value="Verify Code" class="biggerbutton">
+        </div>
+        <div class="button-container">
+            <p><b><a href="resendcode.html">Resend Code</a></b></p>
+        </div>
+    </form>
+</body>
+</html>

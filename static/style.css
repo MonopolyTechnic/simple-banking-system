@@ -1,3 +1,22 @@
+/* Normal link color */
+a {
+    color: #545F71;
+    text-decoration-line: underline;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 22px;
+}
+
+/* Hover color */
+a:hover {
+    color: red; /* Change color on hover */
+}
+
+/* Visited link color */
+a:visited {
+    color: purple; /* Change color for visited links */
+}
+
 body {
     display: flex;
     flex-direction: column;
@@ -11,7 +30,112 @@ body {
 .center {
     padding: 0; /* Remove padding */
     margin: 0; /* Remove margin */
+    text-align: center;
 }
+
+.auth-code-input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px; /* Space between fields */
+    border: 2px solid #545F71;
+    border-radius: 6px;
+    font-size: 18px;
+    text-align: center; /* Center the text for better visibility */
+    transition: border-color 0.3s ease; /* Smooth transition for border color */
+}
+
+.auth-code-input:focus {
+    border-color: #007BFF; /* Change border color on focus */
+    outline: none; /* Remove the default outline */
+}
+
+.buttoncenter
+{
+    width: 220px;   /* Set width */
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
+    text-align: center;
+    float: center;
+}
+
+.biggerbutton
+{
+    border-radius: 10px;
+    background-color: #545F71;
+    color: white;
+    border: 2px solid #e7e7e7;
+    padding: 0px 0px; /* Adjust padding to increase button size */
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    width: 200px;   /* Set width */
+    height: 40px;
+}
+
+.smallerbuttoncenter
+{
+    width: 170px;   /* Set width */
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
+    text-align: center;
+}
+
+.centertextleft
+{
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
+    text-align: left;
+    max-width: 400px; /* Limit the width of the form */
+}
+
+p {
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    color: #545F71;
+    font-weight: 500;
+}
+
+label {
+    display: block; /* Ensure label takes up the full line */
+    margin-bottom: 5px; /* Space between label and input */
+    font-weight: bold; /* Optional: make the label text bold */
+    float: left; /* Aligns labels to the left */
+    color: #545F71;
+    font-weight: 400;
+    font-size: 14px;
+}
+
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px; /* Space between fields */
+    border: 1px solid #545F71;
+    border-radius: 6px;
+}
+input[type="submit"] {
+    border-radius: 10px;
+    background-color: #545F71;
+    color: white;
+    border: 2px solid #e7e7e7;
+    padding: 0px 0px; /* Adjust padding to increase button size */
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    width: 220px;
+    height: 45px;
+    font-size: 16px;
+    cursor: pointer;
+    float: center;
+}
+input[type="submit"]:hover {
+    background-color: #545F71;
+}
+
+
+form {
+    max-width: 300px; /* Limit the width of the form */
+    align-content: center;
+}
+
 
 .button-container {
     margin: 10px 0; /* Add spacing between buttons */
@@ -38,13 +162,23 @@ img {
     font-size: 16px;
 }
 
-.button:hover {
-    background-color: #b7b7b7;
-}
+.button:hover {background-color: #e7e7e7;}
 
 h1 {
     font-family: Arial, Helvetica, sans-serif;
     font-style: normal;
     color: #545F71;
-    font-weight: 700;
+    font-weight: 750;
+    font-size: 48px;
+    line-height: 75%;
+}
+
+.h1smaller
+{
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    color: #545F71;
+    font-weight: 750;
+    font-size: 36px;
+    line-height: 75%;
 }

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" href="../static/style.css"> <!-- Link to your CSS -->
+    <title>Monopoly-Technic</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div class="centertextleft">
+        <h1>Welcome!</h1>
+        <p>Login below or <a href="accountcreation.html">create an account</a></p>
+    </div>
+    <form action="/callback" method="POST">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+        <a href="/twofa">
+            <div class="buttoncenter">
+                <input type="submit" value="Sign in">
+                <p><b><a href="/forgot-password">Forgot Password</a></b></p>
+            </div>
+        </a>
+    </form>
+</body>
+</html>
