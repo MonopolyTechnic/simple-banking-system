@@ -1,25 +1,24 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
-	"io"
 	"log"
-	"math/rand"
-	"mime/multipart"
-	"net"
 	"net/http"
-	"net/smtp"
 	"os"
-	"time"
-
 	"github.com/MonopolyTechnic/simple-banking-system/models"
-	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/gorilla/sessions"
+	"crypto/tls"
+	//"bytes"
+	"math/rand"
+	"net/smtp"
+	"time"
+	//"mime/multipart"
+	"net"
+	//"io"
+	"errors"
 )
 
 var (
@@ -47,14 +46,14 @@ var (
 		"Telenor":            "telenor.no",
 		"Telia":              "telia.se",
 	}
+	emailSender  string
+	emailPassword string
 )
 
 const (
-	smtpServer    = "smtp.gmail.com"
-	smtpPort      = "587"
-	emailSender   = "monopolytechnic@gmail.com"
-	emailPassword = "vqdh iwfp cnwf iioh" // App password
-	imagePath     = "static/images/piggybank.jpg"
+	smtpServer   = "smtp.gmail.com"
+	smtpPort     = "587"
+	imagePath    = "static/images/piggybank.jpg"
 )
 
 func main() {
@@ -64,7 +63,7 @@ func main() {
 	// Environment variables
 	host = env["HOST"]
 	port = env["PORT"]
-
+	log.Println("DB Password:", emailPassword)
 	// Set up tables if they do not exist yet
 	exec, err := os.ReadFile("create_tables.sql")
 	handle(err)
@@ -167,10 +166,14 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func SendCode(phoneNumber, phoneCarrier string) (int, error) {
-	carrierGateway, exists := smsGateways[phoneCarrier]
-	if !exists {
-		return 0, fmt.Errorf("unsupported carrier: %s", phoneCarrier)
-	}
+    emailSender = env["emailSender"]   // Read email sender from environment
+    emailPassword = env["emailPassword"]
+    
+    // Look up carrier gateway
+    carrierGateway, exists := smsGateways[phoneCarrier]
+    if !exists {
+        return 0, fmt.Errorf("unsupported carrier: %s", phoneCarrier)
+    }
 
 	recipientSMS := fmt.Sprintf("%s@%s", phoneNumber, carrierGateway)
 
@@ -178,37 +181,8 @@ func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 	rand.Seed(time.Now().UnixNano())
 	verificationCode := rand.Intn(900000) + 100000
 
-	// Create a multipart message
-	var buffer bytes.Buffer
-	writer := multipart.NewWriter(&buffer)
-
-	// Write the message part
-	message := fmt.Sprintf("Subject: Verification Code\n\nYour verification code is: %d", verificationCode)
-	textPart, err := writer.CreateFormField("text")
-	if err != nil {
-		return 0, fmt.Errorf("could not create text part: %v", err)
-	}
-	if _, err := textPart.Write([]byte(message)); err != nil {
-		return 0, fmt.Errorf("could not write message: %v", err)
-	}
-	// Add the image part
-	imageFile, err := os.Open(imagePath)
-	if err != nil {
-		return 0, fmt.Errorf("could not open image file: %v", err)
-	}
-	defer imageFile.Close()
-
-	imagePart, err := writer.CreateFormFile("image", "piggybank.jpg")
-	if err != nil {
-		return 0, fmt.Errorf("could not create image part: %v", err)
-	}
-	if _, err := io.Copy(imagePart, imageFile); err != nil {
-		return 0, fmt.Errorf("could not write image to part: %v", err)
-	}
-	// Close the writer to finalize the multipart message
-	if err := writer.Close(); err != nil {
-		return 0, fmt.Errorf("could not close writer: %v", err)
-	}
+    // Create the plain-text message body
+    message := fmt.Sprintf("Subject: Verification Code\n\nYour verification code is: %d", verificationCode)
 
 	// Set up SMTP connection
 	conn, err := net.Dial("tcp", "smtp.gmail.com:587")
@@ -245,21 +219,22 @@ func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 		return 0, fmt.Errorf("could not set recipient: %v", err)
 	}
 
-	// Send the email
-	w, err := c.Data()
-	if err != nil {
-		return 0, fmt.Errorf("could not send data: %v", err)
-	}
-	if _, err := w.Write(buffer.Bytes()); err != nil {
-		return 0, fmt.Errorf("could not write to SMTP: %v", err)
-	}
-	if err := w.Close(); err != nil {
-		return 0, fmt.Errorf("could not close SMTP connection: %v", err)
-	}
+    // Send the email
+    w, err := c.Data()
+    if err != nil {
+        return 0, fmt.Errorf("could not send data: %v", err)
+    }
+    if _, err := w.Write([]byte(message)); err != nil {
+        return 0, fmt.Errorf("could not write to SMTP: %v", err)
+    }
+    if err := w.Close(); err != nil {
+        return 0, fmt.Errorf("could not close SMTP connection: %v", err)
+    }
 
 	c.Quit()
 
-	return verificationCode, nil
+    // Return the verification code to the caller
+    return verificationCode, nil
 }
 
 // Define AUTH LOGIN
@@ -288,6 +263,8 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	}
 	return nil, nil
 }
+
+
 
 func twofa(w http.ResponseWriter, r *http.Request) {
 	// Get the session
