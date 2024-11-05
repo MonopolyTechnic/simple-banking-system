@@ -2,19 +2,23 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
 	"github.com/MonopolyTechnic/simple-banking-system/models"
+	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/gorilla/sessions"
-	"crypto/tls"
+	"golang.org/x/crypto/bcrypt"
+
 	//"bytes"
 	"math/rand"
 	"net/smtp"
 	"time"
+
 	//"mime/multipart"
 	"net"
 	//"io"
@@ -24,7 +28,7 @@ import (
 var (
 	host        string
 	port        string
-	env         map[string]string = readEnv("dbinfo.env")
+	env         map[string]string = readEnv(".env")
 	store                         = sessions.NewCookieStore([]byte("your-secret-key")) // Change this to a secure key
 	smsGateways                   = map[string]string{
 		"AT&T":               "txt.att.net",
@@ -46,14 +50,14 @@ var (
 		"Telenor":            "telenor.no",
 		"Telia":              "telia.se",
 	}
-	emailSender  string
+	emailSender   string
 	emailPassword string
 )
 
 const (
-	smtpServer   = "smtp.gmail.com"
-	smtpPort     = "587"
-	imagePath    = "static/images/piggybank.jpg"
+	smtpServer = "smtp.gmail.com"
+	smtpPort   = "587"
+	imagePath  = "static/images/piggybank.jpg"
 )
 
 func main() {
@@ -63,13 +67,13 @@ func main() {
 	// Environment variables
 	host = env["HOST"]
 	port = env["PORT"]
-	log.Println("DB Password:", emailPassword)
+	log.Println("Email Password: ", emailPassword)
 	// Set up tables if they do not exist yet
 	exec, err := os.ReadFile("create_tables.sql")
 	handle(err)
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 		_, err := conn.Exec(context.Background(), string(exec))
-		handle(err, "Exec failed")
+		handle(err, "Table creation failed")
 
 		log.Println("Tables successfully created.")
 		return nil
@@ -102,31 +106,10 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A sample read from db
-	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
-		rows, _ := conn.Query(context.Background(), "SELECT * FROM accounts WHERE primary_customer_id = 3")
-		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Account])
-		handle(err, "CollectRows failed")
-
-		// Print out each row and its values
-		var f float64
-		for _, r := range res {
-			fmt.Println(r.AccountNumber.String)
-			fmt.Println(r.PrimaryCustomerID.Int)
-			fmt.Println(r.SecondaryCustomerID.Int)
-			r.Balance.AssignTo(&f)
-			fmt.Println(f)
-		}
-		fmt.Println(len(res))
-		return nil
-	})
-	handle(err)
-
 	http.ServeFile(w, r, "./templates/index.html")
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
-	// TODO: serve a login page
 	http.ServeFile(w, r, "./templates/loginuser.html")
 }
 
@@ -140,9 +123,39 @@ func callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: authenticate user login here
+	var res []models.Profile
+	var err2 error
 
-	http.Redirect(w, r, "/twofa", http.StatusSeeOther)
+	// Check the database for this profile
+	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+		rows, _ := conn.Query(
+			context.Background(),
+			"SELECT password_hash, phone_number, phone_carrier FROM profiles WHERE email = $1",
+			r.FormValue("email"),
+		)
+		res, err2 = pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Profile])
+		handle(err2, "CollectRows failed")
+
+		if len(res) == 0 {
+			return errors.New("Invalid credentials")
+		}
+		// Check the password against its hash
+		err := bcrypt.CompareHashAndPassword(res[0].PasswordHash.Bytes, []byte(r.FormValue("password")))
+		if err != nil {
+			return errors.New("Invalid credentials")
+		}
+		return nil
+	})
+
+	// Invalid credentials
+	if err != nil {
+		// TODO: Show a message saying that invalid credentials have been entered
+		http.Redirect(w, r, "/login-user", http.StatusSeeOther)
+		return
+	}
+	// Valid credentials, move on to 2FA
+	redirect_uri := fmt.Sprintf("/twofa?phone_number=%s&phone_carrier=%s", res[0].PhoneNumber.String, res[0].PhoneCarrier.String)
+	http.Redirect(w, r, redirect_uri, http.StatusSeeOther)
 }
 
 func verifyCode(w http.ResponseWriter, r *http.Request) {
@@ -166,14 +179,14 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func SendCode(phoneNumber, phoneCarrier string) (int, error) {
-    emailSender = env["emailSender"]   // Read email sender from environment
-    emailPassword = env["emailPassword"]
-    
-    // Look up carrier gateway
-    carrierGateway, exists := smsGateways[phoneCarrier]
-    if !exists {
-        return 0, fmt.Errorf("unsupported carrier: %s", phoneCarrier)
-    }
+	emailSender = env["EMAIL_SENDER"] // Read email sender from environment
+	emailPassword = env["EMAIL_PASSWORD"]
+
+	// Look up carrier gateway
+	carrierGateway, exists := smsGateways[phoneCarrier]
+	if !exists {
+		return 0, fmt.Errorf("unsupported carrier: %s", phoneCarrier)
+	}
 
 	recipientSMS := fmt.Sprintf("%s@%s", phoneNumber, carrierGateway)
 
@@ -181,8 +194,8 @@ func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 	rand.Seed(time.Now().UnixNano())
 	verificationCode := rand.Intn(900000) + 100000
 
-    // Create the plain-text message body
-    message := fmt.Sprintf("Subject: Verification Code\n\nYour verification code is: %d", verificationCode)
+	// Create the plain-text message body
+	message := fmt.Sprintf("Subject: Verification Code\n\nYour verification code is: %d", verificationCode)
 
 	// Set up SMTP connection
 	conn, err := net.Dial("tcp", "smtp.gmail.com:587")
@@ -219,22 +232,22 @@ func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 		return 0, fmt.Errorf("could not set recipient: %v", err)
 	}
 
-    // Send the email
-    w, err := c.Data()
-    if err != nil {
-        return 0, fmt.Errorf("could not send data: %v", err)
-    }
-    if _, err := w.Write([]byte(message)); err != nil {
-        return 0, fmt.Errorf("could not write to SMTP: %v", err)
-    }
-    if err := w.Close(); err != nil {
-        return 0, fmt.Errorf("could not close SMTP connection: %v", err)
-    }
+	// Send the email
+	w, err := c.Data()
+	if err != nil {
+		return 0, fmt.Errorf("could not send data: %v", err)
+	}
+	if _, err := w.Write([]byte(message)); err != nil {
+		return 0, fmt.Errorf("could not write to SMTP: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		return 0, fmt.Errorf("could not close SMTP connection: %v", err)
+	}
 
 	c.Quit()
 
-    // Return the verification code to the caller
-    return verificationCode, nil
+	// Return the verification code to the caller
+	return verificationCode, nil
 }
 
 // Define AUTH LOGIN
@@ -263,8 +276,6 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	}
 	return nil, nil
 }
-
-
 
 func twofa(w http.ResponseWriter, r *http.Request) {
 	// Get the session
