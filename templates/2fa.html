@@ -12,6 +12,9 @@
     <div class="centertextleft">
         <h1>Two-Factor Authentication</h1>
         <p>Please enter the code sent to your phone:</p>
+        {% for flash in flashes %}
+            <p class="flash flash-error">{{flash}}</p>
+        {% endfor %}
     </div>
     <form action="/twofa" method="POST">
         <label for="code">Authentication Code</label>

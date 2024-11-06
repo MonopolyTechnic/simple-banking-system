@@ -226,18 +226,19 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodGet {
-		phone_number := r.URL.Query().Get("phone_number") // Assuming phone number is passed as a query parameter
-		phone_carrier := r.URL.Query().Get("phone_carrier")
-		actualCode, err := SendCode(phone_number, phone_carrier)
-		session.Values["actualCode"] = actualCode // Store the code in the session
-		log.Println(actualCode)
-		err = session.Save(r, w) // Save the session
-		if err != nil {
-			http.Error(w, "Unable to save session", http.StatusInternalServerError)
-			return
+		if r.URL.Query().Get("retry") != "true" {
+			phone_number := r.URL.Query().Get("phone_number") // Assuming phone number is passed as a query parameter
+			phone_carrier := r.URL.Query().Get("phone_carrier")
+			actualCode, err := SendCode(phone_number, phone_carrier)
+			session.Values["actualCode"] = actualCode // Store the code in the session
+			err = session.Save(r, w)                  // Save the session
+			if err != nil {
+				http.Error(w, "Unable to save session", http.StatusInternalServerError)
+				return
+			}
 		}
 
-		RenderTemplate(w, "2fa.html")
+		RenderTemplate(w, "2fa.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 	} else if r.Method == http.MethodPost {
 		code := r.FormValue("code")
 		actualCode, ok := session.Values["actualCode"]
@@ -248,7 +249,11 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 			// TODO: redirect to employee or user based on the user (or have separate endpoints)
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
-			http.Error(w, "Invalid code", http.StatusUnauthorized) //change this for a second attempt?
+			session.AddFlash("Invalid code.")
+			err = session.Save(r, w)
+			handle(err)
+
+			http.Redirect(w, r, "/twofa?retry=true", http.StatusSeeOther)
 		}
 	} else {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
