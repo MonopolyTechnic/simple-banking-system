@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/gob"
 	"fmt"
 	"log"
 	"net/http"
@@ -72,6 +73,9 @@ func main() {
 	})
 	handle(err)
 
+	// Allow encoding of LogInCookie for session cookies
+	gob.Register(&LogInCookie{})
+
 	// Serve static content
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
@@ -79,11 +83,13 @@ func main() {
 	http.HandleFunc("/", index)
 	http.HandleFunc("/twofa", twofa)
 	http.HandleFunc("/login-user", loginUser)
+	http.HandleFunc("/login-employee", loginEmployee)
 	http.HandleFunc("/forgot-password", forgotPassword)
 	http.HandleFunc("/forgot-password-sent", forgotPasswordSent)
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/verify-code", verifyCode)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
+	http.HandleFunc("/logout", logout)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -102,6 +108,23 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
+	// TODO: redirect to customer dashboard if already logged in
+	RenderTemplate(w, "loginuser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+}
+
+func loginEmployee(w http.ResponseWriter, r *http.Request) {
+	// Redirect to employee dashboard if already logged in
+	session, err := store.Get(r, "session-name")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	loggedIn := false
+	if ok {
+		loggedIn = val.(*LogInCookie).LoggedIn
+	}
+	if loggedIn {
+		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+	}
+	// TODO: change to loginemployee template ?
 	RenderTemplate(w, "loginuser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
 
@@ -113,6 +136,7 @@ func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "postresetpassword.html")
 }
 
+// Callback endpoint for login requests
 func callback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -168,12 +192,41 @@ func verifyCode(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: authenticate code here
 
+	// Mark as logged in
+	session, err := store.Get(r, "session-name")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	var cookie *LogInCookie
+	if ok {
+		cookie = val.(*LogInCookie)
+		cookie.LoggedIn = true
+		cookie.Email = "" // TODO: mark which user is logged in and their profile type (employee, customer)
+	} else {
+		cookie = &LogInCookie{LoggedIn: true, Email: ""}
+	}
+	session.Values["logged-in"] = cookie
+	err = session.Save(r, w)
+	handle(err)
+
 	// TODO: redirect to employee or user based on the user (or have separate endpoints)
 	http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 }
 
 func employeeDashboard(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "employeehomescreen.html")
+	// Redirect to login if not logged in yet
+	session, err := store.Get(r, "session-name")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	loggedIn := false
+	if ok {
+		loggedIn = val.(*LogInCookie).LoggedIn
+	}
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
+	}
+
+	// TODO: Pass in the correct name that is stored in cookies
+	RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex"})
 }
 
 func twofa(w http.ResponseWriter, r *http.Request) {
@@ -207,4 +260,24 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	// Mark as logged in
+	session, err := store.Get(r, "session-name")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	var cookie *LogInCookie
+	if ok {
+		cookie = val.(*LogInCookie)
+		cookie.LoggedIn = false
+		cookie.Email = ""
+	} else {
+		cookie = &LogInCookie{LoggedIn: false, Email: ""}
+	}
+	session.Values["logged-in"] = cookie
+	err = session.Save(r, w)
+	handle(err)
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

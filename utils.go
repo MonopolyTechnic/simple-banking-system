@@ -170,6 +170,11 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	return nil, nil
 }
 
+type LogInCookie struct {
+	LoggedIn bool
+	Email    string
+}
+
 // Helper func to handle errors
 func handle(err error, fmtStr ...string) {
 	fmt := fmt.Sprintf("%v\n", err)
