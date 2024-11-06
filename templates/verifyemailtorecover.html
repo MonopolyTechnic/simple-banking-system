@@ -11,10 +11,19 @@
 <body>
     <div class="centertextleft">
         <h1 class="h1smaller">Confirm your email</h1>
-        <p>Is this you?</p>
+        <p>SomeEmail****@gmail.com</p>
     </div>
-    <label for="email">SomeEmail****@gmail.com</label>
-    <button class="biggerbutton"><b>Yes!</b></button>  <!-- Go to post recover email -->
-    <button class="biggerbutton"><b>No, go back.</b></button> <!-- Go back to forgot email -->
+
+    <!-- Form for Yes option -->
+    <form action="/post-recovered-email" method="POST" style="margin-top: 15px";>
+        <input type="hidden" name="response" value="yes">
+        <button type="submit" class="button"><b>Yes, this is me!</b></button>
+    </form>
+
+    <!-- Form for No option -->
+    <form action="/forgot-email" method="POST" style="margin-top: 15px";>
+        <input type="hidden" name="response" value="no">
+        <button type="submit" class="button"><b>No who's that...</b></button>
+    </form>
 </body>
 </html>

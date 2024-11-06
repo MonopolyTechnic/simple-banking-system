@@ -92,6 +92,8 @@ func main() {
 	http.HandleFunc("/verify-code", verifyCode)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
 	http.HandleFunc("/forgot-email", forgotEmail)
+	http.HandleFunc("/post-recovered-email", postRecoveredEmail)
+	http.HandleFunc("/verify-email-to-recover", verifyEmailtoRecover)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -171,6 +173,14 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 
 func forgotEmail(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./templates/forgotemail.html")
+}
+
+func verifyEmailtoRecover(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./templates/verifyemailtorecover.html")
+}
+
+func postRecoveredEmail(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./templates/postrecoveredemail.html")
 }
 
 func SendCode(phoneNumber, phoneCarrier string) (int, error) {
