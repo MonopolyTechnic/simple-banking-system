@@ -63,7 +63,7 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 
 // Helper func to retrieve flashes
 func RetrieveFlashes(r *http.Request, w http.ResponseWriter) []interface{} {
-	session, err := store.Get(r, "session-name")
+	session, err := store.Get(r, "flash-session")
 	handle(err)
 
 	flashes := session.Flashes()
@@ -170,9 +170,21 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	return nil, nil
 }
 
-type LogInCookie struct {
-	LoggedIn bool
-	Email    string
+// Information relating to the current logged in user's session
+type LogInSessionCookie struct {
+	LoggedIn     bool
+	Email        string
+	ProfileType  string
+	PhoneNumber  string
+	PhoneCarrier string
+}
+
+// All information relating to the current login attempt
+type LogInAttemptCookie struct {
+	Email        string
+	ProfileType  string
+	PhoneNumber  string
+	PhoneCarrier string
 }
 
 // Helper func to handle errors
