@@ -2,67 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Monopoly-Technic</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Header and Columns Example</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style2.css">
     <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-    <!-- Flash Messages -->
-    <div class="flash-messages">
-        {% for flash in flashes %}
-            <p class="flash flash-error">{{flash}}</p>
-        {% endfor %}
-    </div>
-
-    <!-- Header Section -->
     <header>
-        <div class="top-header">
-            <div class="header-left">
-                <a href="#home" class="icon-link">
-                    <span class="material-icons icon-large">home</span>
-                </a>
+        <div class="top_header">
+            <div class="leftheader">
+                <a href="#home"><span class="material-icons" style="font-size: 35px;">home</span></a>
             </div>
-            <div class="header-middle">
-                <h2 class="brand-name">Bank Name</h2>
+            <div class="middleheader">
+                <h2 class="black_text heading_medium">Bank name</h2>
             </div>
-            <div class="header-right">
+            <div class="rightheader">
                 <nav>
-                    <ul class="header-nav">
-                        <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
-                        <li><a href="#settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
-                        <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
+                    <ul>
+                        <li><a href="#profile"><span class="material-icons" style="font-size: 35px;">person</span></a></li>
+                        <li><a href="#settings"><span class="material-icons" style="font-size: 35px;">settings</span></a></li>
+                        <li><a href="/logout" title="Sign out"><span class="material-icons" style="font-size: 35px;">logout</span></a></li>
                     </ul>
                 </nav>
             </div>
         </div>
-        <div class="header-bottom">
-            <h1 class="welcome-message">Hello, {{ fname }}!</h1>
+        <div class="bottom_header">
+            <h1>Hello, {{ fname }}!</h1>
         </div>
     </header>
-
-    <!-- Main Content -->
-    <main class="content-container">
-        <section class="user-section">
-            <div class="section-header">
-                <h1 class="section-title">Users</h1>
+    <div class="margined_container">
+        <div class="no_margin">   
+            <div class="small_row">
+                <div class="box small_box">
+                    <h1 class="black_text heading_medium">Users</h1>
+                </div>
+                <div class="box">
+                    <button>+New User</button>
+                </div>
+                <div class="box"></div>
+                <div class="box"></div>
+                <div class="box"></div>
             </div>
-            <div class="section-actions">
-                <form action="/add-user" method="GET">
-                    <button type="submit" class="btn btn-primary">+ New User</button>
-                </form>
+            <div class="small_row">
+                <div class="box">
+                    <form>
+                        <div class = "search">
+                            <span class="search-icon material-icons" style="font-size: 35px;">search</span>
+                            <input class="search-input" type="search" placeholder="search for account by email">
+                        </div>
+                    </form>
+                </div>
             </div>
-        </section>
-
-        <section class="search-section">
-            <div class="search-box">
-                <form action="#" method="GET" class="search-form">
-                    <label for="email" class="search-label">Search for account by email</label>
-                    <input type="email" id="email" name="email" class="input-field" required>
-                </form>
-            </div>
-        </section>
-    </main>
+            <div class="small_row"></div>
+        </div>
+    </div>
 </body>
 </html>
