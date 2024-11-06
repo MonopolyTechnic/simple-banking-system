@@ -2,19 +2,22 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
 	"github.com/MonopolyTechnic/simple-banking-system/models"
+	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/gorilla/sessions"
-	"crypto/tls"
+
 	//"bytes"
 	"math/rand"
 	"net/smtp"
 	"time"
+
 	//"mime/multipart"
 	"net"
 	//"io"
@@ -46,14 +49,14 @@ var (
 		"Telenor":            "telenor.no",
 		"Telia":              "telia.se",
 	}
-	emailSender  string
+	emailSender   string
 	emailPassword string
 )
 
 const (
-	smtpServer   = "smtp.gmail.com"
-	smtpPort     = "587"
-	imagePath    = "static/images/piggybank.jpg"
+	smtpServer = "smtp.gmail.com"
+	smtpPort   = "587"
+	imagePath  = "static/images/piggybank.jpg"
 )
 
 func main() {
@@ -88,6 +91,7 @@ func main() {
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/verify-code", verifyCode)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
+	http.HandleFunc("/forgot-email", forgotEmail)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -165,15 +169,19 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./templates/employeehomescreen.html")
 }
 
+func forgotEmail(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./templates/forgotpassword.html")
+}
+
 func SendCode(phoneNumber, phoneCarrier string) (int, error) {
-    emailSender = env["emailSender"]   // Read email sender from environment
-    emailPassword = env["emailPassword"]
-    
-    // Look up carrier gateway
-    carrierGateway, exists := smsGateways[phoneCarrier]
-    if !exists {
-        return 0, fmt.Errorf("unsupported carrier: %s", phoneCarrier)
-    }
+	emailSender = env["emailSender"] // Read email sender from environment
+	emailPassword = env["emailPassword"]
+
+	// Look up carrier gateway
+	carrierGateway, exists := smsGateways[phoneCarrier]
+	if !exists {
+		return 0, fmt.Errorf("unsupported carrier: %s", phoneCarrier)
+	}
 
 	recipientSMS := fmt.Sprintf("%s@%s", phoneNumber, carrierGateway)
 
@@ -181,8 +189,8 @@ func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 	rand.Seed(time.Now().UnixNano())
 	verificationCode := rand.Intn(900000) + 100000
 
-    // Create the plain-text message body
-    message := fmt.Sprintf("Subject: Verification Code\n\nYour verification code is: %d", verificationCode)
+	// Create the plain-text message body
+	message := fmt.Sprintf("Subject: Verification Code\n\nYour verification code is: %d", verificationCode)
 
 	// Set up SMTP connection
 	conn, err := net.Dial("tcp", "smtp.gmail.com:587")
@@ -219,22 +227,22 @@ func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 		return 0, fmt.Errorf("could not set recipient: %v", err)
 	}
 
-    // Send the email
-    w, err := c.Data()
-    if err != nil {
-        return 0, fmt.Errorf("could not send data: %v", err)
-    }
-    if _, err := w.Write([]byte(message)); err != nil {
-        return 0, fmt.Errorf("could not write to SMTP: %v", err)
-    }
-    if err := w.Close(); err != nil {
-        return 0, fmt.Errorf("could not close SMTP connection: %v", err)
-    }
+	// Send the email
+	w, err := c.Data()
+	if err != nil {
+		return 0, fmt.Errorf("could not send data: %v", err)
+	}
+	if _, err := w.Write([]byte(message)); err != nil {
+		return 0, fmt.Errorf("could not write to SMTP: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		return 0, fmt.Errorf("could not close SMTP connection: %v", err)
+	}
 
 	c.Quit()
 
-    // Return the verification code to the caller
-    return verificationCode, nil
+	// Return the verification code to the caller
+	return verificationCode, nil
 }
 
 // Define AUTH LOGIN
@@ -263,8 +271,6 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	}
 	return nil, nil
 }
-
-
 
 func twofa(w http.ResponseWriter, r *http.Request) {
 	// Get the session
