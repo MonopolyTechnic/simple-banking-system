@@ -182,3 +182,15 @@ h1 {
     font-size: 36px;
     line-height: 75%;
 }
+
+.flash-error {
+    color: #a8313b;
+}
+
+.flash-success {
+    color: #388f6c;
+}
+
+.flash-info {
+    color: #33618f;
+}

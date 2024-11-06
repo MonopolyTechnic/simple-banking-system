@@ -12,6 +12,9 @@
     <div class="centertextleft">
         <h1>Welcome!</h1>
         <p>Enter your login details.</p>
+        {% for flash in flashes %}
+            <p class="flash flash-error">{{flash}}</p>
+        {% endfor %}
     </div>
     <form action="/callback" method="POST">
         <label for="email">Email</label>
