@@ -60,7 +60,6 @@ func main() {
 	// Environment variables
 	host = env["HOST"]
 	port = env["PORT"]
-	log.Println("Email Password: ", emailPassword)
 	// Set up tables if they do not exist yet
 	exec, err := os.ReadFile("create_tables.sql")
 	handle(err)
@@ -87,7 +86,6 @@ func main() {
 	http.HandleFunc("/forgot-password", forgotPassword)
 	http.HandleFunc("/forgot-password-sent", forgotPasswordSent)
 	http.HandleFunc("/callback", callback)
-	http.HandleFunc("/verify-code", verifyCode)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
 	http.HandleFunc("/logout", logout)
 
@@ -184,7 +182,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirect_uri, http.StatusSeeOther)
 }
 
-func verifyCode(w http.ResponseWriter, r *http.Request) {
+func SetLoggedIn(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -251,9 +249,12 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 		RenderTemplate(w, "2fa.html")
 	} else if r.Method == http.MethodPost {
 		code := r.FormValue("code")
-		if actualCode, ok := session.Values["actualCode"].(string); ok && code == actualCode {
+		actualCode, ok := session.Values["actualCode"]
+		actualCode = fmt.Sprintf("%d", actualCode)
+		if ok && code == actualCode {
 			// Code is correct, redirect to accounts page
-			http.Redirect(w, r, "/accounts", http.StatusSeeOther)
+			SetLoggedIn(w, r)
+			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
 			http.Error(w, "Invalid code", http.StatusUnauthorized) //change this for a second attempt?
 		}

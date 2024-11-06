@@ -13,7 +13,7 @@
         <h1>Two-Factor Authentication</h1>
         <p>Please enter the code sent to your phone:</p>
     </div>
-    <form action="/verify-code" method="POST">
+    <form action="/twofa" method="POST">
         <label for="code">Authentication Code</label>
         <input type="text" id="code" name="code" required maxlength="6" placeholder="123456" class="auth-code-input">
         <div class="button-container">
