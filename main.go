@@ -518,7 +518,12 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		lastName := r.FormValue("lname")
 		email := r.FormValue("email")
 		phoneNum := r.FormValue("phonenum")
+		phoneNum = stripNonAlphanumeric(phoneNum)
 		carrier := r.FormValue("carrier")
+		if _, exists := smsGateways[carrier]; !exists {
+			http.Error(w, "Carrier not in list of provided carriers.", http.StatusInternalServerError)
+			return
+		}
 		password := r.FormValue("pw")
 		dob := r.FormValue("dob") // Date of Birth
 		billingAddress := r.FormValue("billing_address") // Billing Address
@@ -546,9 +551,9 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 					password_hash
 				) VALUES (
 					'customer', 
-					COALESCE(NULLIF($1, ''), 'Admin'), 
-					COALESCE(NULLIF($2, ''), 'User'), 
-					COALESCE(NULLIF($3, ''), 'admin@company.com'), 
+					$1,
+					$2, 
+					$3, 
 					$4, 
 					$5, 
 					$6, 
