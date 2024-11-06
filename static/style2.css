@@ -31,13 +31,13 @@ header {
 button{
     color: white;
     background-color: #545F71;
-    height: 60%;
-    width: 60%;
+    width: 140px;   /* Set width */
+    height: 50px;
 }
 
-form{
-    display: flex;
-}
+
+
+
 
 
 .heading_medium {
@@ -104,6 +104,7 @@ ul{
     flex-direction: row;
     flex-grow: 1;
     min-height: 100px;
+    align-items: center;
 }
 
 .med_row {
@@ -123,22 +124,38 @@ ul{
     flex: 1;
     align-items: center;
     justify-content: center;
-}
 
-.button_box {
-    display: flex;
-    border: 1px solid black;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    height: 50%;
-    width: 50%;
 }
 
 .no_margin{
     margin: 0;
     padding: 0;
     height: 100%;
+}
+
+.material-icons{
+    color:rgba(0,0,0,.5);
+}
+
+.search{
+    width: max-content;
+    display: flex;
+    align-items: center;
+    padding:14px;
+    border-radius:28px;
+    background:#f6f6f6
+}
+
+.search-input{
+    outline: none;
+    border: none;
+    background: transparent;
+    width: 300px;
+}
+
+.search-input::placeholder,
+.search-icon{
+    color:rgba(0,0,0,.5);
 }
 
 
