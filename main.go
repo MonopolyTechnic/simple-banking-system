@@ -76,7 +76,6 @@ const (
 func main() {
 	// Show file and line number in logs
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	gob.Register(time.Time{})
 
 	// Environment variables
 	host = env["HOST"]
@@ -96,6 +95,7 @@ func main() {
 	// Allow encoding of LogInSessionCookie for session cookies
 	gob.Register(&LogInSessionCookie{})
 	gob.Register(&LogInAttemptCookie{})
+	gob.Register(time.Time{})
 
 	// Serve static content
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
@@ -182,6 +182,7 @@ func generateResetToken() string {
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-name")
 	if err != nil {
+		fmt.Println("Unable to retrieve session:", err)
 		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
 		return
 	}
@@ -233,18 +234,12 @@ func isValidToken(w http.ResponseWriter, r *http.Request, token string) bool {
 }
 
 func resetPassword(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "session-name")
-	if err != nil {
-		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
-		return
-	}
 	if r.Method == http.MethodPost {
 		// Get the token, new password, and confirm password
 		token := r.FormValue("token")
 		email := r.FormValue("email")
 		newPassword := r.FormValue("newPassword")
 		confirmPassword := r.FormValue("confirmPassword")
-
 		// Check if token is valid
 		if !isValidToken(w, r, token) {
 			http.Error(w, "Reset link has expired or is invalid", http.StatusBadRequest)
