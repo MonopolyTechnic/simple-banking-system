@@ -20,7 +20,8 @@ header {
     display: flex; 
     align-items: center;
     justify-content: space-between; 
-    background-color: #D2D6F0;
+    background-image: url('images/clouds.jpg');
+    background-size: 60%; 
     color: white;
     padding: 0px; /*maybe change?*/
     height: 33vh;
