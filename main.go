@@ -182,15 +182,8 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirect_uri, http.StatusSeeOther)
 }
 
+// SetLoggedIn is a helper function to set the login cookies
 func SetLoggedIn(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// TODO: authenticate code here
-
-	// Mark as logged in
 	session, err := store.Get(r, "session-name")
 	handle(err)
 	val, ok := session.Values["logged-in"]
@@ -205,9 +198,6 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request) {
 	session.Values["logged-in"] = cookie
 	err = session.Save(r, w)
 	handle(err)
-
-	// TODO: redirect to employee or user based on the user (or have separate endpoints)
-	http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 }
 
 func employeeDashboard(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +230,8 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 		phone_carrier := r.URL.Query().Get("phone_carrier")
 		actualCode, err := SendCode(phone_number, phone_carrier)
 		session.Values["actualCode"] = actualCode // Store the code in the session
-		err = session.Save(r, w)                  // Save the session
+		log.Println(actualCode)
+		err = session.Save(r, w) // Save the session
 		if err != nil {
 			http.Error(w, "Unable to save session", http.StatusInternalServerError)
 			return
@@ -254,6 +245,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 		if ok && code == actualCode {
 			// Code is correct, redirect to accounts page
 			SetLoggedIn(w, r)
+			// TODO: redirect to employee or user based on the user (or have separate endpoints)
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
 			http.Error(w, "Invalid code", http.StatusUnauthorized) //change this for a second attempt?
