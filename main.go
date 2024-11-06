@@ -110,6 +110,7 @@ func main() {
 	http.HandleFunc("/postresetpassword", forgotPasswordSent)
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
+	http.HandleFunc("/add-user", addUser)
 	http.HandleFunc("/logout", logout)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
@@ -495,10 +496,99 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 
 	if val.(*LogInSessionCookie).ProfileType == "employee" {
 		// TODO: Pass in the correct name that is stored in cookies
-		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex"})
+		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
 	} else {
 		// TODO: redirect to user accounts page instead
 		// http.Redirect(w, r, "/accounts", http.StatusSeeOther)
-		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex"})
+		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
 	}
+}
+
+func addUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		// Parse form data
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "Unable to parse form data", http.StatusBadRequest)
+			return
+		}
+
+		// Extract the data from the form
+		firstName := r.FormValue("fname")
+		lastName := r.FormValue("lname")
+		email := r.FormValue("email")
+		phoneNum := r.FormValue("phonenum")
+		carrier := r.FormValue("carrier")
+		password := r.FormValue("pw")
+		dob := r.FormValue("dob") // Date of Birth
+		billingAddress := r.FormValue("billing_address") // Billing Address
+
+		// Hash the password
+		passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+			return
+		}
+
+		// Insert the new user into the database
+		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			_, err := conn.Exec(
+				context.Background(),
+				`INSERT INTO profiles (
+					profile_type,
+					first_name,
+					last_name,
+					email,
+					date_of_birth,
+					billing_address,
+					phone_number,
+					phone_carrier,
+					password_hash
+				) VALUES (
+					'customer', 
+					COALESCE(NULLIF($1, ''), 'Admin'), 
+					COALESCE(NULLIF($2, ''), 'User'), 
+					COALESCE(NULLIF($3, ''), 'admin@company.com'), 
+					$4, 
+					$5, 
+					$6, 
+					$7, 
+					$8
+				);`,
+				firstName,
+				lastName,
+				email,
+				dob,                // Include Date of Birth
+				billingAddress,     // Include Billing Address
+				phoneNum,
+				carrier,
+				passwordHash,
+			)
+
+			// Check for error and return if any
+			if err != nil {
+				return fmt.Errorf("failed to insert user into database: %v", err)
+			}
+
+			// Success, return nil to indicate the user has been added
+			return nil
+		})
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to add user: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Flash message after successful insertion
+		flashSession, err2 := store.Get(r, "flash-session")
+		handle(err2)
+		flashSession.AddFlash("User added successfully!")
+		err2 = flashSession.Save(r, w)
+		handle(err2)
+
+		// Respond with a success message
+		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+	}
+
+	// Render the add user form (in case of GET request or on error)
+	RenderTemplate(w, "adduser.html")
 }

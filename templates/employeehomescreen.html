@@ -9,6 +9,13 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
+    <div class="centertextleft">
+        <h1>Welcome!</h1>
+        <p>Enter your login details.</p>
+        {% for flash in flashes %}
+            <p class="flash flash-error">{{flash}}</p>
+        {% endfor %}
+    </div>
     <header>
         <div class="top_header">
             <div class="leftheader">
@@ -38,7 +45,9 @@
                     <h1 class="black_text heading_medium">Users</h1>
                 </div>
                 <div class="box">
-                    <button>+New user</button>
+                    <form action="/add-user" method="GET">
+                        <button type="submit">+ New user</button>
+                    </form>
                 </div>
                 <div class="box"></div>
                 <div class="box"></div>
