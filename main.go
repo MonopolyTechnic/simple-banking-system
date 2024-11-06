@@ -627,37 +627,65 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Extract primary customer ID
-		primaryCustomerID, err := strconv.Atoi(r.FormValue("primary_customer_id"))
+		primaryCustomerEmail := r.FormValue("primary_customer_email")
+		var secondaryCustomerEmail string
+		if r.FormValue("secondary_customer_email") != "" {
+			secondaryCustomerEmail = r.FormValue("secondary_customer_email")
+		}
+		
+		var primaryCustomerID int
+		var secondaryCustomerID *int
+		rc := 0
+		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			// Query to get the customer ID for the primary customer email
+			err := conn.QueryRow(
+				context.Background(),
+				`SELECT id FROM profiles WHERE email = $1`, 
+				primaryCustomerEmail,
+			).Scan(&primaryCustomerID)
+		
+			if err != nil {
+				return fmt.Errorf("failed to get customer id for primary email %s: %v", primaryCustomerEmail, err)
+			}
+		
+			// If a secondary email is provided, get the customer ID for the secondary customer
+			if secondaryCustomerEmail != "" {
+				err := conn.QueryRow(
+					context.Background(),
+					`SELECT id FROM profiles WHERE email = $1`, 
+					secondaryCustomerEmail,
+				).Scan(secondaryCustomerID)
+		
+				if err != nil {
+					return fmt.Errorf("failed to get customer id for secondary email %s: %v", secondaryCustomerEmail, err)
+				}
+			}
+			err = conn.QueryRow(
+				context.Background(),
+				`SELECT COUNT(*) FROM accounts`,
+			).Scan(&rc)
+
+			// Check for errors
+			if err != nil {
+				return fmt.Errorf("failed to get row count from profiles: %v", err)
+			}		
+			// At this point, both primaryCustomerID and secondaryCustomerID should be populated
+			return nil
+		})
+		
 		if err != nil {
 			flashSession, err2 := store.Get(r, "flash-session")
 			handle(err2)
 
-			flashSession.AddFlash("Invalid primary customer ID.")
+			flashSession.AddFlash("Invalid customer ID.")
 			err2 = flashSession.Save(r, w)
 			handle(err2)
 
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
-
-		// Extract secondary customer ID (optional)
-		var secondaryCustomerID *int
-		if r.FormValue("secondary_customer_id") != "" {
-			secCustomerID, err := strconv.Atoi(r.FormValue("secondary_customer_id"))
-			if err != nil {
-				flashSession, err2 := store.Get(r, "flash-session")
-				handle(err2)
-
-				flashSession.AddFlash("Invalid secondary customer ID.")
-				err2 = flashSession.Save(r, w)
-				handle(err2)
-
-				http.Redirect(w, r, "/open-account", http.StatusSeeOther)
-				return
-			}
-			secondaryCustomerID = &secCustomerID
-		}
-
+		rc = rc + 1
+		accountNum := fmt.Sprintf("%016d", rc)
 		// Extract account type
 		accountType := r.FormValue("account_type")
 		if accountType != "checking" && accountType != "savings" {
@@ -685,36 +713,6 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
-		rc := 0
-		// Open DB connection to fetch row count from profiles and insert account
-		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-			// Variable to store the row count
-			var rowCount int
-
-			// Query to get the number of rows in the 'profiles' table
-			err := conn.QueryRow(
-				context.Background(),
-				`SELECT COUNT(*) FROM profiles`,
-			).Scan(&rowCount)
-
-			// Check for errors
-			if err != nil {
-				return fmt.Errorf("failed to get row count from profiles: %v", err)
-			}
-			rc = rowCount
-			// Return row count
-			return nil
-		})
-
-		// Check for errors in DB connection and operation
-		if err != nil {
-			log.Fatalf("Error: %v", err)
-		}
-
-		// Increment row count to generate account number
-		rc = rc + 1
-		accountNum := fmt.Sprintf("%016d", rc)
-
 		// Insert the new account into the 'accounts' table
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Prepare SQL insert statement
