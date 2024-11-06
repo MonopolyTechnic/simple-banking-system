@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/smtp"
+	"regexp"
 
 	"github.com/flosch/pongo2/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +22,13 @@ func readEnv(filepath string) map[string]string {
 	env, err := godotenv.Read(filepath)
 	handle(err)
 	return env
+}
+func stripNonAlphanumeric(input string) string {
+    // Create a regular expression to match non-alphanumeric characters
+    re := regexp.MustCompile("[^a-zA-Z0-9]")
+    
+    // Replace all non-alphanumeric characters with an empty string
+    return re.ReplaceAllString(input, "")
 }
 
 // Helper func that acts as a context manager to open a new connection to the database

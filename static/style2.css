@@ -1,144 +1,157 @@
+/* Global Styles */
 body {
-    margin: 0;
     font-family: Arial, sans-serif;
-    display: flex;
-    flex-direction: column; /* Stack header and content vertically */
-    height: 100vh;
-}
-
-h1 {
-    font-family: Arial, Helvetica, sans-serif;
-    font-style: normal;
-    color: #545F71;
-    font-weight: 750;
-    font-size: 48px;
-    line-height: 75%;
-}
-
-
-header {
-    display: flex; 
-    align-items: center;
-    justify-content: space-between; 
-    background-color: #D2D6F0;
-    color: white;
-    padding: 0px; /*maybe change?*/
-    height: 33vh;
-    align-items: stretch;
-    flex-direction: column;
-}
-
-button{
-    color: white;
-    background-color: #545F71;
-    height: 60%;
-    width: 60%;
-}
-
-form{
-    display: flex;
-}
-
-
-.heading_medium {
-    font-size: 2.5rem; 
-    font-weight: bold;
-}
-
-.black_text{
-    color: black;
-}
-
-.top_header {
-    display: flex;
-    flex-direction: row;
-    flex: 2;
-}
-
-.leftheader{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.middleheader{
-  flex: 6;
-  display: flex;
-  flex-direction: column; 
-  text-align: center;
-
-}
-
-.rightheader{
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end; 
-}
-
-.bottom_header{
-    display: flex;
-    flex: 1;
-    margin: 0% 2% 0% 2%;
-}
-
-ul{
-    list-style-type: none;
     margin: 0;
+    padding: 0;
+    background-color: #f4f7fa;
 }
 
-.center {
-    padding: 0; 
-    margin: 0;
+.flash-messages {
     text-align: center;
 }
 
-.content {
-    display: flex; 
-    flex: 1; 
+.flash-error {
+    color: red;
 }
 
-.small_row {
-    flex: 1; 
+/* Header */
+.top-header {
     display: flex;
-    flex-direction: row;
-    flex-grow: 1;
-    min-height: 100px;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.med_row {
-    flex: 2; 
-    background-color: #ddd;
-}
-
-.margined_container{
-    margin: 0% 2% 0% 2%;
-    flex: 1;
-}
-.small_box{
-    flex: .5;
-}
-.box {
+.header-left, .header-middle, .header-right {
     display: flex;
-    flex: 1;
     align-items: center;
-    justify-content: center;
 }
 
-.button_box {
-    display: flex;
-    border: 1px solid black;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    height: 50%;
-    width: 50%;
+.icon-link {
+    text-decoration: none;
+    color: #333;
 }
 
-.no_margin{
-    margin: 0;
+.icon-large {
+    font-size: 35px;
+}
+
+.brand-name {
+    font-size: 24px;
+    color: #333;
+}
+
+.header-nav {
+    list-style: none;
     padding: 0;
-    height: 100%;
+    margin: 0;
+    display: flex;
+    gap: 20px;
 }
 
+.header-nav li {
+    display: inline;
+}
 
+/* Bottom Header (Greeting) */
+.header-bottom {
+    padding: 10px 20px;
+    background-color: #fff;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-message {
+    font-size: 18px;
+    color: #333;
+}
+
+/* Content Container */
+.content-container {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* User Section */
+.user-section {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header {
+    flex: 1;
+}
+
+.section-title {
+    font-size: 22px;
+    color: #333;
+}
+
+.section-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn {
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: #007BFF;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #218838;
+}
+
+/* Search Section */
+.search-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.search-box {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.search-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.search-label {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.input-field {
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}

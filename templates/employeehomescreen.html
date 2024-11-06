@@ -9,61 +9,63 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-    <div class="centertextleft">
-        <h1>Welcome!</h1>
+    <!-- Flash Messages -->
+    <div class="flash-messages">
         {% for flash in flashes %}
             <p class="flash flash-error">{{flash}}</p>
         {% endfor %}
     </div>
+
+    <!-- Header Section -->
     <header>
-        <div class="top_header">
-            <div class="leftheader">
-                <a href="#home"><span class="material-icons" style="font-size: 35px;">home</span></a>
+        <div class="top-header">
+            <div class="header-left">
+                <a href="#home" class="icon-link">
+                    <span class="material-icons icon-large">home</span>
+                </a>
             </div>
-            <div class="middleheader">
-                <h2 class="black_text heading_medium">Bank name</h2>
+            <div class="header-middle">
+                <h2 class="brand-name">Bank Name</h2>
             </div>
-            <div class="rightheader">
+            <div class="header-right">
                 <nav>
-                    <ul>
-                        <li><a href="#profile"><span class="material-icons" style="font-size: 35px;">person</span></a></li>
-                        <li><a href="#settings"><span class="material-icons" style="font-size: 35px;">settings</span></a></li>
-                        <li><a href="/logout" title="Sign out"><span class="material-icons" style="font-size: 35px;">logout</span></a></li>
+                    <ul class="header-nav">
+                        <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
+                        <li><a href="#settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
+                        <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
                     </ul>
                 </nav>
             </div>
         </div>
-        <div class="bottom_header">
-            <h1>Hello, {{ fname }}!</h1>
+        <div class="header-bottom">
+            <h1 class="welcome-message">Hello, {{ fname }}!</h1>
         </div>
     </header>
-    <div class="margined_container">
-        <div class="no_margin">   
-            <div class="small_row">
-                <div class="small_box">
-                    <h1 class="black_text heading_medium">Users</h1>
-                </div>
-                <div class="box">
-                    <form action="/add-user" method="GET">
-                        <button type="submit">+ New user</button>
-                    </form>
-                </div>
-                <div class="box"></div>
-                <div class="box"></div>
-                <div class="box"></div>
+
+    <!-- Main Content -->
+    <main class="content-container">
+        <section class="user-section">
+            <div class="section-header">
+                <h1 class="section-title">Users</h1>
             </div>
-            <div class="small_row">
-                <div class="box">
-                    <div class="center">
-                        <form>
-                            <label for="email">Search for account by email</label>
-                            <input type="email" id="email" name="email" required>
-                        </form>
-                    </div>
-                </div>
+            <div class="section-actions">
+                <form action="/add-user" method="GET">
+                    <button type="submit" class="btn btn-primary">+ New User</button>
+                </form>
+                <form action="/open-account" method="GET">
+                    <button type="submit" class="btn btn-secondary">Open Account</button>
+                </form>
             </div>
-            <div class="small_row"></div>
-        </div>
-    </div>
+        </section>
+        
+        <section class="search-section">
+            <div class="search-box">
+                <form action="#" method="GET" class="search-form">
+                    <label for="email" class="search-label">Search for account by email</label>
+                    <input type="email" id="email" name="email" class="input-field" required>
+                </form>
+            </div>
+        </section>
+    </main>
 </body>
 </html>

@@ -1,121 +1,113 @@
-/* General styles for the page */
+/* General styling for links */
+a {
+    color: #545F71;
+    text-decoration-line: underline;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 22px;
+}
+
+a:hover {
+    color: red; /* Change color on hover */
+}
+
+a:visited {
+    color: purple; /* Change color for visited links */
+}
+
 body {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start; /* Align content from the top */
     align-items: center;
-    height: 100vh;
-    margin: -10% 0 0 0;
-    text-align: center;
-    font-family: Arial, Helvetica, sans-serif;
-    background-color: #f4f7fa;
+    min-height: 100vh;
+    margin: 0;
+    padding-top: 50px; /* Adds space at the top to push content downward */
 }
 
-/* Center aligned text for the header */
 .centertextleft {
     padding: 0;
     margin: 0;
     text-align: left;
-    max-width: 400px;
-    margin-bottom: 10px; /* Reduced margin */
+    max-width: 400px; /* Limit the width of the form */
 }
 
-.centertextleft h1 {
+p {
     font-family: Arial, Helvetica, sans-serif;
-    font-style: normal;
-    color: #545F71;
-    font-weight: 750;
-    font-size: 18px;  /* 50% of original size */
-    line-height: 75%;
-}
-
-.centertextleft p {
-    font-family: Arial, Helvetica, sans-serif;
-    font-style: normal;
     color: #545F71;
     font-weight: 500;
-    margin-top: 5px;  /* Reduced margin */
-    font-size: 10px;  /* 50% of original size */
-}
-
-/* Form styling */
-form {
-    max-width: 240px;
-    width: 100%;
-    background-color: white;
-    padding: 10px;  /* 50% of original padding */
-    border-radius: 8px;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 label {
-    display: block;
-    margin-bottom: 4px;  /* Reduced margin */
-    font-weight: 600;
+    display: block; /* Ensure labels take up full line */
+    margin-bottom: 5px;
+    font-weight: 400;
+    font-size: 14px;
     color: #545F71;
-    font-size: 7px;  /* 50% of original size */
-    text-align: left;
 }
 
-input[type="text"],
 input[type="email"],
 input[type="password"],
-input[type="date"],
+input[type="number"],
+input[type="text"],
+select,
+input[type="submit"],
 textarea {
-    width: 100%;
-    padding: 6px;  /* 50% of original padding */
-    margin-bottom: 10px;  /* Reduced margin */
+    width: 100%; /* Ensure full width for form fields */
+    max-width: 400px; /* Set a max width to prevent form fields from becoming too wide */
+    padding: 10px;
+    margin-bottom: 15px; /* Space between fields */
     border: 1px solid #545F71;
     border-radius: 6px;
-    font-size: 8px;  /* 50% of original size */
-    color: #333;
-    background-color: #f9f9f9;
-    transition: border-color 0.3s ease;
+    height: 25px; /* Set a uniform height */
+    box-sizing: border-box; /* Ensure padding is included in the height */
 }
 
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="date"]:focus,
-textarea:focus {
-    border-color: #007BFF;
-    outline: none;
+/* Ensuring select box has the same height */
+select {
+    height: 45px; /* Set the same height for the select box */
 }
 
+/* Uniform height for textarea */
 textarea {
-    resize: vertical;
-    height: 50px;  /* 50% of original height */
+    resize: vertical; /* Allow users to resize the textarea vertically */
+    max-width: 400px; /* Limit width of the textarea */
+    height: 120px; /* Uniform height for textarea (can be adjusted as needed) */
 }
 
-/* Button styles */
-.smallerbuttoncenter,
-.button-container {
-    width: 100%;
-    text-align: center;
-}
-
+/* Submit button styles */
 input[type="submit"] {
-    border-radius: 10px;
     background-color: #545F71;
     color: white;
     border: 2px solid #e7e7e7;
-    padding: 5px 0;  /* 50% of original padding */
-    font-size: 8px;  /* 50% of original size */
-    width: 100%;
-    height: 22px;  /* 50% of original height */
+    font-size: 16px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    padding: 10px;
+    width: 220px;
+    height: 45px; /* Consistent height with input fields */
+    border-radius: 10px;
 }
 
 input[type="submit"]:hover {
-    background-color: #007BFF;
+    background-color: #4d5760; /* Slightly darker shade for hover */
 }
 
-input[type="submit"]:active {
-    background-color: #0056b3;
+form {
+    max-width: 400px; /* Limit the width of the form */
+    margin: 0 auto;
 }
 
-/* Styling for error, success, and info messages */
+/* Ensuring all form elements are stacked vertically */
+form label,
+form input,
+form select,
+form textarea {
+    display: block;
+    width: 100%;  /* Full width */
+    margin-bottom: 15px; /* Space between form fields */
+}
+
+/* Flash message styling */
 .flash-error {
     color: #a8313b;
 }
@@ -128,9 +120,18 @@ input[type="submit"]:active {
     color: #33618f;
 }
 
-/* Specific styles for the smaller button in the form */
-.smallerbuttoncenter input[type="submit"] {
-    width: 85px;  /* 50% of original width */
-    margin: 0 auto;
+h1, .h1smaller {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #545F71;
+    font-weight: 750;
+    text-align: center;
 }
 
+.h1smaller {
+    font-size: 36px;
+}
+
+h1 {
+    font-size: 48px;
+    line-height: 75%;
+}

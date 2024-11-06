@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 	"math/rand"
-
+	"strconv"
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
 	"github.com/gorilla/sessions"
@@ -111,6 +111,7 @@ func main() {
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
 	http.HandleFunc("/add-user", addUser)
+	http.HandleFunc("/open-account", openAccount)
 	http.HandleFunc("/logout", logout)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
@@ -518,7 +519,12 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		lastName := r.FormValue("lname")
 		email := r.FormValue("email")
 		phoneNum := r.FormValue("phonenum")
+		phoneNum = stripNonAlphanumeric(phoneNum)
 		carrier := r.FormValue("carrier")
+		if _, exists := smsGateways[carrier]; !exists {
+			http.Error(w, "Carrier not in list of provided carriers.", http.StatusInternalServerError)
+			return
+		}
 		password := r.FormValue("pw")
 		dob := r.FormValue("dob") // Date of Birth
 		billingAddress := r.FormValue("billing_address") // Billing Address
@@ -546,9 +552,9 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 					password_hash
 				) VALUES (
 					'customer', 
-					COALESCE(NULLIF($1, ''), 'Admin'), 
-					COALESCE(NULLIF($2, ''), 'User'), 
-					COALESCE(NULLIF($3, ''), 'admin@company.com'), 
+					$1,
+					$2, 
+					$3, 
 					$4, 
 					$5, 
 					$6, 
@@ -591,4 +597,128 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 	// Render the add user form (in case of GET request or on error)
 	RenderTemplate(w, "adduser.html")
+}
+
+func openAccount(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+
+		// Parse form data
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+			return
+		}
+	
+		// Extract primary customer ID
+		primaryCustomerID, err := strconv.Atoi(r.FormValue("primary_customer_id"))
+		if err != nil {
+			http.Error(w, "Invalid primary customer ID", http.StatusBadRequest)
+			return
+		}
+	
+		// Extract secondary customer ID (optional)
+		var secondaryCustomerID *int
+		if r.FormValue("secondary_customer_id") != "" {
+			secCustomerID, err := strconv.Atoi(r.FormValue("secondary_customer_id"))
+			if err != nil {
+				http.Error(w, "Invalid secondary customer ID", http.StatusBadRequest)
+				return
+			}
+			secondaryCustomerID = &secCustomerID
+		}
+	
+		// Extract account type
+		accountType := r.FormValue("account_type")
+		if accountType != "checking" && accountType != "savings" {
+			http.Error(w, "Invalid account type", http.StatusBadRequest)
+			return
+		}
+	
+		// Extract initial balance
+		balance, err := strconv.ParseFloat(r.FormValue("balance"), 64)
+		if err != nil || balance < 0 {
+			http.Error(w, "Invalid initial deposit amount", http.StatusBadRequest)
+			return
+		}
+		rc := 0
+		// Open DB connection to fetch row count from profiles and insert account
+		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			// Variable to store the row count
+			var rowCount int
+	
+			// Query to get the number of rows in the 'profiles' table
+			err := conn.QueryRow(
+				context.Background(),
+				`SELECT COUNT(*) FROM profiles`,
+			).Scan(&rowCount)
+	
+			// Check for errors
+			if err != nil {
+				return fmt.Errorf("failed to get row count from profiles: %v", err)
+			}
+			rc = rowCount
+			// Return row count
+			return nil
+		})
+	
+		// Check for errors in DB connection and operation
+		if err != nil {
+			log.Fatalf("Error: %v", err)
+		}
+	
+		// Increment row count to generate account number
+		rc = rc + 1
+		accountNum := fmt.Sprintf("%016d", rc)
+	
+		// Insert the new account into the 'accounts' table
+		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			// Prepare SQL insert statement
+			query := `
+				INSERT INTO accounts (
+					account_num,
+					primary_customer_id,
+					secondary_customer_id,
+					account_type,
+					balance
+				) VALUES (
+					$1, $2, $3, $4, $5
+				)`
+	
+			// Execute the query
+			_, err := conn.Exec(
+				context.Background(),
+				query,
+				accountNum,              // Account number
+				primaryCustomerID,       // Primary customer ID
+				secondaryCustomerID,     // Secondary customer ID (can be NULL)
+				accountType,             // Account type (checking/savings)
+				balance,                 // Initial balance
+			)
+	
+			// Check for errors during the insert
+			if err != nil {
+				return fmt.Errorf("failed to insert account into database: %v", err)
+			}
+	
+			// Success, return nil to indicate the insert was successful
+			return nil
+		})
+	
+		// If error occurs during insert, return the error
+		if err != nil {
+			log.Fatalf("Error inserting account: %v", err)
+			http.Error(w, "Failed to create account", http.StatusInternalServerError)
+			return
+		}
+		// Flash message after successful insertion
+		flashSession, err2 := store.Get(r, "flash-session")
+		handle(err2)
+		flashSession.AddFlash("Account added successfully!")
+		err2 = flashSession.Save(r, w)
+		handle(err2)
+
+		// Respond with a success message
+		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+	}
+	RenderTemplate(w, "openaccount.html")
 }
