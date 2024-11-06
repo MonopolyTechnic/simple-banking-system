@@ -163,7 +163,7 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 	}
 	// TODO: change to loginemployee template ?
-	RenderTemplate(w, "loginuser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
 
 func generateResetToken() string {
