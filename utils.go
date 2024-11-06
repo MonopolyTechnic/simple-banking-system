@@ -71,6 +71,65 @@ func RetrieveFlashes(r *http.Request, w http.ResponseWriter) []interface{} {
 	return flashes
 }
 
+func SendEmail(endemail string, subject string, body string) (error) {
+	emailSender = env["EMAIL_SENDER"] // Read email sender from environment
+	emailPassword = env["EMAIL_PASSWORD"]
+
+	// Create the plain-text message body
+	message := fmt.Sprintf("Subject: %s\n\n%s: %d", subject, body)
+
+	// Set up SMTP connection
+	conn, err := net.Dial("tcp", "smtp.gmail.com:587")
+	if err != nil {
+		return fmt.Errorf("could not connect to SMTP server: %v", err)
+	}
+
+	// Create SMTP client
+	host := "smtp.gmail.com"
+	c, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return fmt.Errorf("could not create SMTP client: %v", err)
+	}
+
+	// Upgrade to TLS
+	tlsConfig := &tls.Config{
+		ServerName: host,
+	}
+	if err := c.StartTLS(tlsConfig); err != nil {
+		return fmt.Errorf("could not start TLS: %v", err)
+	}
+
+	// Authenticate using AUTH LOGIN
+	auth := LoginAuth(emailSender, emailPassword)
+	if err := c.Auth(auth); err != nil {
+		return fmt.Errorf("could not authenticate: %v", err)
+	}
+
+	// Set the sender and recipient
+	if err := c.Mail(emailSender); err != nil {
+		return fmt.Errorf("could not set sender: %v", err)
+	}
+	if err := c.Rcpt(endemail); err != nil {
+		return fmt.Errorf("could not set endemail: %v", err)
+	}
+
+	// Send the email
+	w, err := c.Data()
+	if err != nil {
+		return fmt.Errorf("could not send data: %v", err)
+	}
+	if _, err := w.Write([]byte(message)); err != nil {
+		return fmt.Errorf("could not write to SMTP: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		return fmt.Errorf("could not close SMTP connection: %v", err)
+	}
+
+	c.Quit()
+	return nil
+
+}
+
 // Helper function to send a verification code to a phone number given the carrier
 func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 	emailSender = env["EMAIL_SENDER"] // Read email sender from environment

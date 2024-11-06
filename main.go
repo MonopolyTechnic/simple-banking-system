@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
+	"math/rand"
 
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
@@ -14,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
-
 	"errors"
 )
 
@@ -43,6 +44,7 @@ var (
 		"Telenor":            "telenor.no",
 		"Telia":              "telia.se",
 	}
+	tokenStore map[string]time.Time = make(map[string]time.Time)
 	emailSender   string
 	emailPassword string
 )
@@ -74,6 +76,7 @@ const (
 func main() {
 	// Show file and line number in logs
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	gob.Register(time.Time{})
 
 	// Environment variables
 	host = env["HOST"]
@@ -103,7 +106,8 @@ func main() {
 	http.HandleFunc("/login-user", loginUser)
 	http.HandleFunc("/login-employee", loginEmployee)
 	http.HandleFunc("/forgot-password", forgotPassword)
-	http.HandleFunc("/forgot-password-sent", forgotPasswordSent)
+	http.HandleFunc("/reset-password", resetPassword)
+	http.HandleFunc("/postresetpassword", forgotPasswordSent)
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
 	http.HandleFunc("/logout", logout)
@@ -156,20 +160,147 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 		loggedIn = val.(*LogInSessionCookie).LoggedIn
 	}
 	if loggedIn {
-		if val.(*LogInSessionCookie).ProfileType == "employee" {
-			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
-		} else {
-			// TODO: redirect to accounts page instead (once it gets created)
-			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+	}
+	// TODO: change to loginemployee template ?
+	RenderTemplate(w, "loginuser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+}
+
+func generateResetToken() string {
+	// Generate a random token (you could use a stronger method, like UUID or a hash)
+	rand.Seed(time.Now().UnixNano())
+	const tokenLength = 32
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	var token []byte
+	for i := 0; i < tokenLength; i++ {
+		token = append(token, charset[rand.Intn(len(charset))])
+	}
+	return string(token)
+}
+
+
+func forgotPassword(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, "session-name")
+	if err != nil {
+		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
+		return
+	}
+	if r.Method == http.MethodPost {
+		expirationTime := time.Now().Add(15*time.Minute)
+		email := r.FormValue("email")
+		token := generateResetToken()
+		session.Values[token] = expirationTime // Store the code in the session
+		err = session.Save(r, w)
+		if err != nil {
+			fmt.Printf("Failed to save session: %v", err) // Log the actual error
+			http.Error(w, "Unable to save session", http.StatusInternalServerError)
+			return
 		}
+		body := fmt.Sprintf("Click the link below to reset your password.\n\nhttp://%s:%s/reset-password?token=%s", host, port, token)
+		err := SendEmail(email, "Forgot Password", body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+			http.Error(w, "Failed to send email", http.StatusInternalServerError)
+			return
+		}
+
+		// Inform the user that an email has been sent
+		// For example, you can redirect the user or render a confirmation page
+		http.Redirect(w, r, "/postresetpassword", http.StatusSeeOther)
+	}
+	RenderTemplate(w, "forgotpassword.html")
+}
+
+func isValidToken(w http.ResponseWriter, r *http.Request, token string) bool {
+	// Check if the token exists
+	session, err := store.Get(r, "session-name")
+	if err != nil {
+		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
+		return false
+	}
+	expirationTime, exists := session.Values[token].(time.Time)
+	if !exists {
+		return false // Token not found
+	}
+
+	// Check if the token has expired
+	if time.Now().After(expirationTime) {
+		delete(tokenStore, token) // Remove expired token from the store
+		return false
+	}
+
+	return true
+}
+
+func resetPassword(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, "session-name")
+	if err != nil {
+		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
+		return
+	}
+	if r.Method == http.MethodPost {
+		// Get the token, new password, and confirm password
+		token := r.FormValue("token")
+		email := r.FormValue("email")
+		newPassword := r.FormValue("newPassword")
+		confirmPassword := r.FormValue("confirmPassword")
+
+		// Check if token is valid
+		if !isValidToken(w, r, token) {
+			http.Error(w, "Reset link has expired or is invalid", http.StatusBadRequest)
+			return
+		}
+
+		// Check if new password and confirm password match
+		if newPassword != confirmPassword {
+			// If passwords do not match, show an error message
+			http.Error(w, "Passwords do not match", http.StatusBadRequest)
+			return
+		}
+
+		// Proceed with updating the password (e.g., update the database)
+		// UpdatePassword(token, newPassword)
+		err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+	
+			// Hash the new password before saving it
+			newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+			if err != nil {
+				return err
+			}
+	
+			// Update the password hash in the database
+			_, err = conn.Exec(
+				context.Background(),
+				"UPDATE profiles SET password_hash = $1 WHERE email = $2",
+				newPasswordHash,
+				email,
+			)
+			if err != nil {
+				return err
+			}
+	
+			// Success, return nil to indicate the password has been updated
+			return nil
+		})
+	
+		// Handle errors or success
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// Success message (you can also redirect to a success page)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
-}
-
-func forgotPassword(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "forgotpassword.html")
+	// Render reset password form (pass token as part of context)
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	// Render the form with the token
+	RenderTemplate(w, "resetpassword.html", map[string]interface{}{"Token": token})
 }
 
 func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
