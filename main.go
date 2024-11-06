@@ -170,7 +170,7 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func forgotEmail(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./templates/forgotpassword.html")
+	http.ServeFile(w, r, "./templates/forgotemail.html")
 }
 
 func SendCode(phoneNumber, phoneCarrier string) (int, error) {
