@@ -23,6 +23,7 @@ func readEnv(filepath string) map[string]string {
 	handle(err)
 	return env
 }
+
 func stripNonAlphanumeric(input string) string {
 	// Create a regular expression to match non-alphanumeric characters
 	re := regexp.MustCompile("[^a-zA-Z0-9]")
@@ -67,6 +68,16 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 		log.Println("Error rendering template:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
+}
+
+// Helper function to add a flash message to the flash session
+func AddFlash(r *http.Request, w http.ResponseWriter, msg string) {
+	flashSession, err2 := store.Get(r, "flash-session")
+	handle(err2)
+
+	flashSession.AddFlash(msg)
+	err2 = flashSession.Save(r, w)
+	handle(err2)
 }
 
 // Helper func to retrieve flashes

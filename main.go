@@ -336,14 +336,9 @@ func callback(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 
-	flashSession, err2 := store.Get(r, "flash-session")
-	handle(err2)
-
 	// Invalid credentials
 	if err != nil {
-		flashSession.AddFlash("Invalid email or password entered.")
-		err2 = flashSession.Save(r, w)
-		handle(err2)
+		AddFlash(r, w, "Invalid email or password entered.")
 
 		if r.URL.Query().Get("profile_type") == "employee" {
 			http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
@@ -411,7 +406,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			log.Println(actualCode)
+			// log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -440,23 +435,14 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 			}
 		} else {
-			flashSession, err := store.Get(r, "flash-session")
-			handle(err)
 			if ok {
-				flashSession.AddFlash("Invalid code.")
-				err = flashSession.Save(r, w)
-				handle(err)
-
+				AddFlash(r, w, "Invalid code.")
 				http.Redirect(w, r, "/twofa?retry=true", http.StatusSeeOther)
 			} else {
 				// code not found: code expired
-				flashSession.AddFlash("Code has expired. We will send another code to your phone.")
-				err = flashSession.Save(r, w)
-				handle(err)
-
+				AddFlash(r, w, "Code has expired. We will send another code to your phone.")
 				http.Redirect(w, r, "/twofa", http.StatusSeeOther)
 			}
-
 		}
 	} else {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -522,12 +508,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		phoneNum = stripNonAlphanumeric(phoneNum)
 		carrier := r.FormValue("carrier")
 		if _, exists := smsGateways[carrier]; !exists {
-			flashSession, err2 := store.Get(r, "flash-session")
-			handle(err2)
-
-			flashSession.AddFlash("Carrier not in list of provided carriers.")
-			err2 = flashSession.Save(r, w)
-			handle(err2)
+			AddFlash(r, w, "Carrier not in list of provided carriers.")
 
 			http.Redirect(w, r, "/add-user", http.StatusSeeOther)
 			return
@@ -589,23 +570,13 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})
 		if err != nil {
-			flashSession, err2 := store.Get(r, "flash-session")
-			handle(err2)
-
-			flashSession.AddFlash(err.Error())
-			err2 = flashSession.Save(r, w)
-			handle(err2)
-
+			AddFlash(r, w, err.Error())
 			http.Redirect(w, r, "/add-user", http.StatusSeeOther)
 			return
 		}
 
 		// Flash message after successful insertion
-		flashSession, err2 := store.Get(r, "flash-session")
-		handle(err2)
-		flashSession.AddFlash("User added successfully!")
-		err2 = flashSession.Save(r, w)
-		handle(err2)
+		AddFlash(r, w, "User added successfully!")
 
 		// Respond with a success message
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
@@ -632,20 +603,14 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("secondary_customer_email") != "" {
 			secondaryCustomerEmail = r.FormValue("secondary_customer_email")
 			if primaryCustomerEmail == secondaryCustomerEmail {
-				flashSession, err2 := store.Get(r, "flash-session")
-				handle(err2)
-
-				flashSession.AddFlash("Primary and secondary email cannot be identical.")
-				err2 = flashSession.Save(r, w)
-				handle(err2)
-
+				AddFlash(r, w, "Primary and secondary email cannot be identical.")
 				http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 				return
 			}
 		}
 
 		var primaryCustomerID int
-		var secondaryCustomerID *int
+		var secondaryCustomerID int
 		rc := 0
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Query to get the customer ID for the primary customer email
@@ -665,7 +630,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 					context.Background(),
 					`SELECT id FROM profiles WHERE email = $1`,
 					secondaryCustomerEmail,
-				).Scan(secondaryCustomerID)
+				).Scan(&secondaryCustomerID)
 
 				if err != nil {
 					return fmt.Errorf("Invalid secondary email: %s", secondaryCustomerEmail)
@@ -685,13 +650,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		})
 
 		if err != nil {
-			flashSession, err2 := store.Get(r, "flash-session")
-			handle(err2)
-
-			flashSession.AddFlash(fmt.Sprintf("%v", err))
-			err2 = flashSession.Save(r, w)
-			handle(err2)
-
+			AddFlash(r, w, err.Error())
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
@@ -700,13 +659,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		// Extract account type
 		accountType := r.FormValue("account_type")
 		if accountType != "checking" && accountType != "savings" {
-			flashSession, err2 := store.Get(r, "flash-session")
-			handle(err2)
-
-			flashSession.AddFlash("Invalid account type.")
-			err2 = flashSession.Save(r, w)
-			handle(err2)
-
+			AddFlash(r, w, "Invalid account type.")
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
@@ -714,16 +667,11 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		// Extract initial balance
 		balance, err := strconv.ParseFloat(r.FormValue("balance"), 64)
 		if err != nil || balance < 0 {
-			flashSession, err2 := store.Get(r, "flash-session")
-			handle(err2)
-
-			flashSession.AddFlash("Invalid initial deposit amount.")
-			err2 = flashSession.Save(r, w)
-			handle(err2)
-
+			AddFlash(r, w, "Invalid initial deposit amount.")
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
+
 		// Insert the new account into the 'accounts' table
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Prepare SQL insert statement
@@ -751,32 +699,20 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 
 			// Check for errors during the insert
 			if err != nil {
-				flashSession, err2 := store.Get(r, "flash-session")
-				handle(err2)
-
-				flashSession.AddFlash(fmt.Sprintf("Failed to insert user into database: %v", err))
-				err2 = flashSession.Save(r, w)
-				handle(err2)
-
-				http.Redirect(w, r, "/open-account", http.StatusSeeOther)
+				return fmt.Errorf("Failed to insert user into database: %v", err)
 			}
 
 			// Success, return nil to indicate the insert was successful
 			return nil
 		})
 
-		// If error occurs during insert, return the error
 		if err != nil {
-			log.Fatalf("Error inserting account: %v", err)
-			http.Error(w, "Failed to create account", http.StatusInternalServerError)
+			AddFlash(r, w, err.Error())
+			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
 		// Flash message after successful insertion
-		flashSession, err2 := store.Get(r, "flash-session")
-		handle(err2)
-		flashSession.AddFlash("Account added successfully!")
-		err2 = flashSession.Save(r, w)
-		handle(err2)
+		AddFlash(r, w, "Account added successfully!")
 
 		// Respond with a success message
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
