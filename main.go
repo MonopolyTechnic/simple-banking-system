@@ -123,7 +123,6 @@ func main() {
 func index(w http.ResponseWriter, r *http.Request) {
 	// For some reason Go's net/http interprets / as a wild card path
 	if r.URL.Path != "/" {
-		w.WriteHeader(http.StatusNotFound)
 		// TODO: Serve a custom 404 page here instead
 		http.Error(w, "Page not found.", http.StatusNotFound)
 		return
@@ -196,10 +195,10 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPost {
-		expirationTime := time.Now().Add(15 * time.Minute)
 		email := r.FormValue("email")
 		token := generateResetToken()
-		session.Values[token] = expirationTime // Store the code in the session
+		session.Values[token] = email    // Store the code in the session
+		session.Options.MaxAge = 15 * 60 // 15 minutes
 		err = session.Save(r, w)
 		if err != nil {
 			fmt.Printf("Failed to save session: %v", err) // Log the actual error
@@ -221,37 +220,42 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "forgotpassword.html")
 }
 
-func isValidToken(w http.ResponseWriter, r *http.Request, token string) bool {
+// Returns email, true if the token is valid, otherwise returns "", false
+func isValidToken(w http.ResponseWriter, r *http.Request, token string) (string, bool) {
 	// Check if the token exists
 	session, err := store.Get(r, "reset-password-session")
 	if err != nil {
 		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
-		return false
+		return "", false
 	}
-	expirationTime, exists := session.Values[token].(time.Time)
-	if !exists {
-		return false // Token not found
+	val, exists := session.Values[token]
+	var email string
+	if val != nil {
+		email = val.(string)
+	} else {
+		email = ""
 	}
-
-	// Check if the token has expired
-	if time.Now().After(expirationTime) {
-		delete(tokenStore, token) // Remove expired token from the store
-		return false
-	}
-
-	return true
+	return email, exists
 }
 
 func resetPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		// Get the token, new password, and confirm password
 		token := r.FormValue("token")
-		email := r.FormValue("email")
 		newPassword := r.FormValue("newPassword")
 		confirmPassword := r.FormValue("confirmPassword")
 		// Check if token is valid
-		if !isValidToken(w, r, token) {
-			http.Error(w, "Reset link has expired or is invalid", http.StatusBadRequest)
+		var email string
+		var ok bool
+		email, ok = isValidToken(w, r, token)
+		if !ok {
+			flashSession, err := store.Get(r, "flash-session")
+			handle(err)
+
+			flashSession.AddFlash("Reset link has expired or is invalid.")
+			err = flashSession.Save(r, w)
+			handle(err)
+			http.Redirect(w, r, "/reset-password?token="+token, http.StatusSeeOther)
 			return
 		}
 
@@ -425,7 +429,6 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			log.Println(actualCode)
 			// log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
