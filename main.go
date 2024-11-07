@@ -123,7 +123,6 @@ func main() {
 func index(w http.ResponseWriter, r *http.Request) {
 	// For some reason Go's net/http interprets / as a wild card path
 	if r.URL.Path != "/" {
-		w.WriteHeader(http.StatusNotFound)
 		// TODO: Serve a custom 404 page here instead
 		http.Error(w, "Page not found.", http.StatusNotFound)
 		return
@@ -531,6 +530,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 			handle(err2)
 
 			http.Redirect(w, r, "/add-user", http.StatusSeeOther)
+			return
 		}
 		password := r.FormValue("pw")
 		// Date of Birth
@@ -629,7 +629,14 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		// Extract primary customer ID
 		primaryCustomerID, err := strconv.Atoi(r.FormValue("primary_customer_id"))
 		if err != nil {
-			http.Error(w, "Invalid primary customer ID", http.StatusBadRequest)
+			flashSession, err2 := store.Get(r, "flash-session")
+			handle(err2)
+
+			flashSession.AddFlash("Invalid primary customer ID.")
+			err2 = flashSession.Save(r, w)
+			handle(err2)
+
+			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
 
@@ -638,7 +645,14 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("secondary_customer_id") != "" {
 			secCustomerID, err := strconv.Atoi(r.FormValue("secondary_customer_id"))
 			if err != nil {
-				http.Error(w, "Invalid secondary customer ID", http.StatusBadRequest)
+				flashSession, err2 := store.Get(r, "flash-session")
+				handle(err2)
+
+				flashSession.AddFlash("Invalid secondary customer ID.")
+				err2 = flashSession.Save(r, w)
+				handle(err2)
+
+				http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 				return
 			}
 			secondaryCustomerID = &secCustomerID
@@ -647,14 +661,28 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		// Extract account type
 		accountType := r.FormValue("account_type")
 		if accountType != "checking" && accountType != "savings" {
-			http.Error(w, "Invalid account type", http.StatusBadRequest)
+			flashSession, err2 := store.Get(r, "flash-session")
+			handle(err2)
+
+			flashSession.AddFlash("Invalid account type.")
+			err2 = flashSession.Save(r, w)
+			handle(err2)
+
+			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
 
 		// Extract initial balance
 		balance, err := strconv.ParseFloat(r.FormValue("balance"), 64)
 		if err != nil || balance < 0 {
-			http.Error(w, "Invalid initial deposit amount", http.StatusBadRequest)
+			flashSession, err2 := store.Get(r, "flash-session")
+			handle(err2)
+
+			flashSession.AddFlash("Invalid initial deposit amount.")
+			err2 = flashSession.Save(r, w)
+			handle(err2)
+
+			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
 		rc := 0
@@ -714,7 +742,14 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 
 			// Check for errors during the insert
 			if err != nil {
-				return fmt.Errorf("failed to insert account into database: %v", err)
+				flashSession, err2 := store.Get(r, "flash-session")
+				handle(err2)
+
+				flashSession.AddFlash(fmt.Sprintf("Failed to insert user into database: %v", err))
+				err2 = flashSession.Save(r, w)
+				handle(err2)
+
+				http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			}
 
 			// Success, return nil to indicate the insert was successful
@@ -736,6 +771,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 
 		// Respond with a success message
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+		return
 	}
-	RenderTemplate(w, "openaccount.html")
+	RenderTemplate(w, "openaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
