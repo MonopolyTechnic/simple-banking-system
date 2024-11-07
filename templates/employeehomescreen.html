@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Monopoly-Technic</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Header and Columns Example</title>
     <link rel="stylesheet" href="/static/style2.css">
     <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -34,11 +35,11 @@
     <div class="margined_container">
         <div class="no_margin">   
             <div class="small_row">
-                <div class="small_box">
+                <div class="box small_box">
                     <h1 class="black_text heading_medium">Users</h1>
                 </div>
                 <div class="box">
-                    <button>+New user</button>
+                    <button>+New User</button>
                 </div>
                 <div class="box"></div>
                 <div class="box"></div>
@@ -46,12 +47,12 @@
             </div>
             <div class="small_row">
                 <div class="box">
-                    <div class="center">
-                        <form>
-                            <label for="email">Search for account by email</label>
-                            <input type="email" id="email" name="email" required>
-                        </form>
-                    </div>
+                    <form>
+                        <div class = "search">
+                            <span class="search-icon material-icons" style="font-size: 35px;">search</span>
+                            <input class="search-input" type="search" placeholder="search for account by email">
+                        </div>
+                    </form>
                 </div>
             </div>
             <div class="small_row"></div>
