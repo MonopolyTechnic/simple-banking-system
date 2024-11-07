@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="stylesheet" href="../static/style.css"> <!-- Link to your CSS -->
+    <link rel="stylesheet" href="/static/style.css"> <!-- Link to CSS -->
     <title>Monopoly-Technic - 2FA</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -12,8 +12,11 @@
     <div class="centertextleft">
         <h1>Two-Factor Authentication</h1>
         <p>Please enter the code sent to your phone:</p>
+        {% for flash in flashes %}
+            <p class="flash flash-error">{{flash}}</p>
+        {% endfor %}
     </div>
-    <form action="/verify-code" method="POST">
+    <form action="/twofa" method="POST">
         <label for="code">Authentication Code</label>
         <input type="text" id="code" name="code" required maxlength="6" placeholder="123456" class="auth-code-input">
         <div class="button-container">
