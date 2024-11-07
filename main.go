@@ -3,20 +3,22 @@ package main
 import (
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
-	"time"
-	"math/rand"
 	"strconv"
+	"strings"
+	"time"
+
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
 	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
-	"errors"
 )
 
 var (
@@ -44,7 +46,7 @@ var (
 		"Telenor":            "telenor.no",
 		"Telia":              "telia.se",
 	}
-	tokenStore map[string]time.Time = make(map[string]time.Time)
+	tokenStore    map[string]time.Time = make(map[string]time.Time)
 	emailSender   string
 	emailPassword string
 )
@@ -180,7 +182,6 @@ func generateResetToken() string {
 	return string(token)
 }
 
-
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-name")
 	if err != nil {
@@ -189,7 +190,7 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPost {
-		expirationTime := time.Now().Add(15*time.Minute)
+		expirationTime := time.Now().Add(15 * time.Minute)
 		email := r.FormValue("email")
 		token := generateResetToken()
 		session.Values[token] = expirationTime // Store the code in the session
@@ -258,13 +259,13 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		// Proceed with updating the password (e.g., update the database)
 		// UpdatePassword(token, newPassword)
 		err := OpenDBConnection(func(conn *pgxpool.Pool) error {
-	
+
 			// Hash the new password before saving it
 			newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 			if err != nil {
 				return err
 			}
-	
+
 			// Update the password hash in the database
 			_, err = conn.Exec(
 				context.Background(),
@@ -275,11 +276,11 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return err
 			}
-	
+
 			// Success, return nil to indicate the password has been updated
 			return nil
 		})
-	
+
 		// Handle errors or success
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -297,7 +298,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Render the form with the token
-	RenderTemplate(w, "resetpassword.html", map[string]interface{}{"Token": token})
+	RenderTemplate(w, "resetpassword.html", pongo2.Context{"Token": token})
 }
 
 func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
@@ -411,7 +412,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			// log.Println(actualCode)
+			log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -522,12 +523,20 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		phoneNum = stripNonAlphanumeric(phoneNum)
 		carrier := r.FormValue("carrier")
 		if _, exists := smsGateways[carrier]; !exists {
-			http.Error(w, "Carrier not in list of provided carriers.", http.StatusInternalServerError)
-			return
+			flashSession, err2 := store.Get(r, "flash-session")
+			handle(err2)
+
+			flashSession.AddFlash("Carrier not in list of provided carriers.")
+			err2 = flashSession.Save(r, w)
+			handle(err2)
+
+			http.Redirect(w, r, "/add-user", http.StatusSeeOther)
 		}
 		password := r.FormValue("pw")
-		dob := r.FormValue("dob") // Date of Birth
-		billingAddress := r.FormValue("billing_address") // Billing Address
+		// Date of Birth
+		dob := r.FormValue("dob")
+		// Billing Address
+		billingAddress := strings.ReplaceAll(r.FormValue("billing_address"), "\r", "")
 
 		// Hash the password
 		passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -564,8 +573,8 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 				firstName,
 				lastName,
 				email,
-				dob,                // Include Date of Birth
-				billingAddress,     // Include Billing Address
+				dob,            // Include Date of Birth
+				billingAddress, // Include Billing Address
 				phoneNum,
 				carrier,
 				passwordHash,
@@ -573,7 +582,14 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 			// Check for error and return if any
 			if err != nil {
-				return fmt.Errorf("failed to insert user into database: %v", err)
+				flashSession, err2 := store.Get(r, "flash-session")
+				handle(err2)
+
+				flashSession.AddFlash(fmt.Sprintf("Failed to insert user into database: %v", err))
+				err2 = flashSession.Save(r, w)
+				handle(err2)
+
+				http.Redirect(w, r, "/add-user", http.StatusSeeOther)
 			}
 
 			// Success, return nil to indicate the user has been added
@@ -595,8 +611,9 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 	}
 
+	// Quality of life improvement would be to somehow persist the form data for a retry
 	// Render the add user form (in case of GET request or on error)
-	RenderTemplate(w, "adduser.html")
+	RenderTemplate(w, "adduser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
 
 func openAccount(w http.ResponseWriter, r *http.Request) {
@@ -608,14 +625,14 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
 			return
 		}
-	
+
 		// Extract primary customer ID
 		primaryCustomerID, err := strconv.Atoi(r.FormValue("primary_customer_id"))
 		if err != nil {
 			http.Error(w, "Invalid primary customer ID", http.StatusBadRequest)
 			return
 		}
-	
+
 		// Extract secondary customer ID (optional)
 		var secondaryCustomerID *int
 		if r.FormValue("secondary_customer_id") != "" {
@@ -626,14 +643,14 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			}
 			secondaryCustomerID = &secCustomerID
 		}
-	
+
 		// Extract account type
 		accountType := r.FormValue("account_type")
 		if accountType != "checking" && accountType != "savings" {
 			http.Error(w, "Invalid account type", http.StatusBadRequest)
 			return
 		}
-	
+
 		// Extract initial balance
 		balance, err := strconv.ParseFloat(r.FormValue("balance"), 64)
 		if err != nil || balance < 0 {
@@ -645,13 +662,13 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Variable to store the row count
 			var rowCount int
-	
+
 			// Query to get the number of rows in the 'profiles' table
 			err := conn.QueryRow(
 				context.Background(),
 				`SELECT COUNT(*) FROM profiles`,
 			).Scan(&rowCount)
-	
+
 			// Check for errors
 			if err != nil {
 				return fmt.Errorf("failed to get row count from profiles: %v", err)
@@ -660,16 +677,16 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			// Return row count
 			return nil
 		})
-	
+
 		// Check for errors in DB connection and operation
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-	
+
 		// Increment row count to generate account number
 		rc = rc + 1
 		accountNum := fmt.Sprintf("%016d", rc)
-	
+
 		// Insert the new account into the 'accounts' table
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Prepare SQL insert statement
@@ -683,27 +700,27 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 				) VALUES (
 					$1, $2, $3, $4, $5
 				)`
-	
+
 			// Execute the query
 			_, err := conn.Exec(
 				context.Background(),
 				query,
-				accountNum,              // Account number
-				primaryCustomerID,       // Primary customer ID
-				secondaryCustomerID,     // Secondary customer ID (can be NULL)
-				accountType,             // Account type (checking/savings)
-				balance,                 // Initial balance
+				accountNum,          // Account number
+				primaryCustomerID,   // Primary customer ID
+				secondaryCustomerID, // Secondary customer ID (can be NULL)
+				accountType,         // Account type (checking/savings)
+				balance,             // Initial balance
 			)
-	
+
 			// Check for errors during the insert
 			if err != nil {
 				return fmt.Errorf("failed to insert account into database: %v", err)
 			}
-	
+
 			// Success, return nil to indicate the insert was successful
 			return nil
 		})
-	
+
 		// If error occurs during insert, return the error
 		if err != nil {
 			log.Fatalf("Error inserting account: %v", err)

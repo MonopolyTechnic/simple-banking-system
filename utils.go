@@ -24,11 +24,11 @@ func readEnv(filepath string) map[string]string {
 	return env
 }
 func stripNonAlphanumeric(input string) string {
-    // Create a regular expression to match non-alphanumeric characters
-    re := regexp.MustCompile("[^a-zA-Z0-9]")
-    
-    // Replace all non-alphanumeric characters with an empty string
-    return re.ReplaceAllString(input, "")
+	// Create a regular expression to match non-alphanumeric characters
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+
+	// Replace all non-alphanumeric characters with an empty string
+	return re.ReplaceAllString(input, "")
 }
 
 // Helper func that acts as a context manager to open a new connection to the database
@@ -79,7 +79,7 @@ func RetrieveFlashes(r *http.Request, w http.ResponseWriter) []interface{} {
 	return flashes
 }
 
-func SendEmail(endemail string, subject string, body string) (error) {
+func SendEmail(endemail string, subject string, body string) error {
 	emailSender = env["EMAIL_SENDER"] // Read email sender from environment
 	emailPassword = env["EMAIL_PASSWORD"]
 

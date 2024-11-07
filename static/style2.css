@@ -11,7 +11,15 @@ body {
 }
 
 .flash-error {
-    color: red;
+    color: #a8313b;
+}
+
+.flash-success {
+    color: #388f6c;
+}
+
+.flash-info {
+    color: #33618f;
 }
 
 /* Header */
