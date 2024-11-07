@@ -12,6 +12,10 @@
     <div class="centertextleft">
         <h1 class="h1smaller">Open a New Account</h1>
         <p>Fill out the details to open a new account</p>
+        <!-- Flash Message Section (if any) -->
+        {% for flash in flashes %}
+            <p class="flash flash-error">{{ flash }}</p>
+        {% endfor %}
     </div>
 
     <form action="/open-account" method="POST">
@@ -39,11 +43,6 @@
             <input type="submit" value="Open Account">
         </div>
     </form>
-
-    <!-- Flash Message Section (if any) -->
-    {% for flash in flashes %}
-        <p class="flash flash-error">{{ flash }}</p>
-    {% endfor %}
 
 </body>
 </html>

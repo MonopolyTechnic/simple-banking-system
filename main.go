@@ -582,21 +582,21 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 			// Check for error and return if any
 			if err != nil {
-				flashSession, err2 := store.Get(r, "flash-session")
-				handle(err2)
-
-				flashSession.AddFlash(fmt.Sprintf("Failed to insert user into database: %v", err))
-				err2 = flashSession.Save(r, w)
-				handle(err2)
-
-				http.Redirect(w, r, "/add-user", http.StatusSeeOther)
+				return fmt.Errorf("Failed to insert user into database: %v", err)
 			}
 
 			// Success, return nil to indicate the user has been added
 			return nil
 		})
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to add user: %v", err), http.StatusInternalServerError)
+			flashSession, err2 := store.Get(r, "flash-session")
+			handle(err2)
+
+			flashSession.AddFlash(err.Error())
+			err2 = flashSession.Save(r, w)
+			handle(err2)
+
+			http.Redirect(w, r, "/add-user", http.StatusSeeOther)
 			return
 		}
 
@@ -631,8 +631,19 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		var secondaryCustomerEmail string
 		if r.FormValue("secondary_customer_email") != "" {
 			secondaryCustomerEmail = r.FormValue("secondary_customer_email")
+			if primaryCustomerEmail == secondaryCustomerEmail {
+				flashSession, err2 := store.Get(r, "flash-session")
+				handle(err2)
+
+				flashSession.AddFlash("Primary and secondary email cannot be identical.")
+				err2 = flashSession.Save(r, w)
+				handle(err2)
+
+				http.Redirect(w, r, "/open-account", http.StatusSeeOther)
+				return
+			}
 		}
-		
+
 		var primaryCustomerID int
 		var secondaryCustomerID *int
 		rc := 0
@@ -640,24 +651,24 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			// Query to get the customer ID for the primary customer email
 			err := conn.QueryRow(
 				context.Background(),
-				`SELECT id FROM profiles WHERE email = $1`, 
+				`SELECT id FROM profiles WHERE email = $1`,
 				primaryCustomerEmail,
 			).Scan(&primaryCustomerID)
-		
+
 			if err != nil {
-				return fmt.Errorf("failed to get customer id for primary email %s: %v", primaryCustomerEmail, err)
+				return fmt.Errorf("Invalid primary email: %s", primaryCustomerEmail)
 			}
-		
+
 			// If a secondary email is provided, get the customer ID for the secondary customer
 			if secondaryCustomerEmail != "" {
 				err := conn.QueryRow(
 					context.Background(),
-					`SELECT id FROM profiles WHERE email = $1`, 
+					`SELECT id FROM profiles WHERE email = $1`,
 					secondaryCustomerEmail,
 				).Scan(secondaryCustomerID)
-		
+
 				if err != nil {
-					return fmt.Errorf("failed to get customer id for secondary email %s: %v", secondaryCustomerEmail, err)
+					return fmt.Errorf("Invalid secondary email: %s", secondaryCustomerEmail)
 				}
 			}
 			err = conn.QueryRow(
@@ -668,16 +679,16 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			// Check for errors
 			if err != nil {
 				return fmt.Errorf("failed to get row count from profiles: %v", err)
-			}		
+			}
 			// At this point, both primaryCustomerID and secondaryCustomerID should be populated
 			return nil
 		})
-		
+
 		if err != nil {
 			flashSession, err2 := store.Get(r, "flash-session")
 			handle(err2)
 
-			flashSession.AddFlash("Invalid customer ID.")
+			flashSession.AddFlash(fmt.Sprintf("%v", err))
 			err2 = flashSession.Save(r, w)
 			handle(err2)
 
