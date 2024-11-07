@@ -5,10 +5,12 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"time"
-	"math/rand"
+
+	"errors"
 
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
@@ -16,7 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
-	"errors"
 )
 
 var (
@@ -44,7 +45,7 @@ var (
 		"Telenor":            "telenor.no",
 		"Telia":              "telia.se",
 	}
-	tokenStore map[string]time.Time = make(map[string]time.Time)
+	tokenStore    map[string]time.Time = make(map[string]time.Time)
 	emailSender   string
 	emailPassword string
 )
@@ -68,6 +69,9 @@ const (
 		key "actualCode", type int
 		Contains the verification code for the current login attempt
 		Expires after 10 minutes
+	reset-password-session:
+		key token, type time.Time
+		Contains the expiration time of the token
 	flash-session:
 		Contains any flash messages to show
 		Added using session.AddFlash()
@@ -160,9 +164,15 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 		loggedIn = val.(*LogInSessionCookie).LoggedIn
 	}
 	if loggedIn {
-		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+		if val.(*LogInSessionCookie).ProfileType == "employee" {
+			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+		} else {
+			// TODO: redirect to accounts page instead (once it gets created)
+			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+		}
+		return
 	}
-	// TODO: change to loginemployee template ?
+
 	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
 
@@ -178,16 +188,15 @@ func generateResetToken() string {
 	return string(token)
 }
 
-
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "session-name")
+	session, err := store.Get(r, "reset-password-session")
 	if err != nil {
 		fmt.Println("Unable to retrieve session:", err)
 		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
 		return
 	}
 	if r.Method == http.MethodPost {
-		expirationTime := time.Now().Add(15*time.Minute)
+		expirationTime := time.Now().Add(15 * time.Minute)
 		email := r.FormValue("email")
 		token := generateResetToken()
 		session.Values[token] = expirationTime // Store the code in the session
@@ -214,7 +223,7 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 
 func isValidToken(w http.ResponseWriter, r *http.Request, token string) bool {
 	// Check if the token exists
-	session, err := store.Get(r, "session-name")
+	session, err := store.Get(r, "reset-password-session")
 	if err != nil {
 		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
 		return false
@@ -249,20 +258,27 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		// Check if new password and confirm password match
 		if newPassword != confirmPassword {
 			// If passwords do not match, show an error message
-			http.Error(w, "Passwords do not match", http.StatusBadRequest)
+			flashSession, err := store.Get(r, "flash-session")
+			handle(err)
+
+			flashSession.AddFlash("Passwords do not match.")
+			err = flashSession.Save(r, w)
+			handle(err)
+
+			http.Redirect(w, r, "/reset-password?token="+token, http.StatusSeeOther)
 			return
 		}
 
 		// Proceed with updating the password (e.g., update the database)
 		// UpdatePassword(token, newPassword)
 		err := OpenDBConnection(func(conn *pgxpool.Pool) error {
-	
+
 			// Hash the new password before saving it
 			newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 			if err != nil {
 				return err
 			}
-	
+
 			// Update the password hash in the database
 			_, err = conn.Exec(
 				context.Background(),
@@ -273,11 +289,11 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return err
 			}
-	
+
 			// Success, return nil to indicate the password has been updated
 			return nil
 		})
-	
+
 		// Handle errors or success
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -295,7 +311,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Render the form with the token
-	RenderTemplate(w, "resetpassword.html", map[string]interface{}{"Token": token})
+	RenderTemplate(w, "resetpassword.html", map[string]interface{}{"Token": token, "flashes": RetrieveFlashes(r, w)})
 }
 
 func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
@@ -409,6 +425,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
+			log.Println(actualCode)
 			// log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
