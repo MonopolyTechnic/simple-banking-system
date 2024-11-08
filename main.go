@@ -115,6 +115,9 @@ func main() {
 	http.HandleFunc("/callback", callback)
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
 	http.HandleFunc("/logout", logout)
+	http.HandleFunc("/forgot-email", forgotEmail)
+	http.HandleFunc("/verify-email-to-recover", verifyEmailtoRecover)
+	http.HandleFunc("/post-recovered-email", postrecoveredemail)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -521,4 +524,16 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 		// http.Redirect(w, r, "/accounts", http.StatusSeeOther)
 		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex"})
 	}
+}
+
+func forgotEmail(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "forgotemail.html")
+}
+
+func verifyEmailtoRecover(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "verifyemailtorecover.html")
+}
+
+func postrecoveredemail(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "postrecoveredemail.html")
 }
