@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"os"
@@ -16,6 +18,7 @@ import (
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
 	"github.com/gorilla/sessions"
+	"github.com/jackc/pgx/pgtype"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
@@ -118,6 +121,7 @@ func main() {
 	http.HandleFunc("/add-user", addUser)
 	http.HandleFunc("/open-account", openAccount)
 	http.HandleFunc("/logout", logout)
+	http.HandleFunc("/list-accounts", listAccounts)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -729,4 +733,91 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	RenderTemplate(w, "openaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+}
+
+func listAccounts(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	loggedIn := false
+	if ok {
+		loggedIn = val.(*LogInSessionCookie).LoggedIn
+	}
+	if !loggedIn {
+		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
+		return
+	}
+
+	if val.(*LogInSessionCookie).ProfileType != "employee" {
+		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
+		return
+	}
+
+	customerEmail := r.URL.Query().Get("email")
+	var customerID int
+	var accountData []models.Account
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		err := conn.QueryRow(
+			context.Background(),
+			`SELECT id FROM profiles WHERE email = $1 AND profile_type = 'customer'`,
+			customerEmail,
+		).Scan(&customerID)
+
+		if err != nil {
+			return fmt.Errorf("could not find customer matching given email: %v", err)
+		}
+
+		rows, _ := conn.Query(
+			context.Background(),
+			"SELECT account_num, primary_customer_id, secondary_customer_id, account_type, balance FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1",
+			customerID,
+		)
+		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Account])
+		handle(err, "CollectRows failed")
+		if err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+		}
+		accountData = res
+
+		return nil
+	})
+
+	if err != nil {
+		handle(err, "Query failed")
+	}
+
+	type JSONAccount struct {
+		AccountNumber       string  `json:"accountNum"`
+		PrimaryCustomerID   int32   `json:"primaryCustomerId"`
+		SecondaryCustomerID int32   `json:"secondaryCustomerId"`
+		AccountType         string  `json:"accountType"`
+		Balance             float64 `json:"balance"`
+	}
+
+	jsonData := make([]JSONAccount, len(accountData))
+	for i, item := range accountData {
+		if item.AccountNumber.Status == pgtype.Present {
+			jsonData[i].AccountNumber = item.AccountNumber.String
+		}
+		if item.PrimaryCustomerID.Status == pgtype.Present {
+			jsonData[i].PrimaryCustomerID = item.PrimaryCustomerID.Int
+		}
+		if item.SecondaryCustomerID.Status == pgtype.Present {
+			jsonData[i].SecondaryCustomerID = item.SecondaryCustomerID.Int
+		}
+		if item.AccountType.Status == pgtype.Present {
+			jsonData[i].AccountType = item.AccountType.String
+		}
+		if item.Balance.Status == pgtype.Present {
+			jsonData[i].Balance = float64(item.Balance.Int.Int64()) * math.Pow(10, float64(item.Balance.Exp))
+		}
+	}
+
+	jsonBytes, err := json.Marshal(jsonData)
+	if err != nil {
+		handle(err, "Failed to generate JSON")
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(jsonBytes)
 }
