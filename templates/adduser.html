@@ -1,43 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" href="/static/formstyle.css"> <!-- Link to CSS -->
+    <title>Add New User</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Reset Password</title>
-    <link rel="stylesheet" href="/static/style.css"> <!-- Link to CSS -->
 </head>
 
 <body>
     <div class="centertextleft">
-        <h1 class="h1smaller">Reset Your Password</h1>
-        <p>Please enter your new password below.</p>
+        <h1 class="h1smaller">Add New User</h1>
+        <p>Enter the required details below:</p>
+        {% for flash in flashes %}
+            <p class="flash flash-error">{{flash}}</p>
+        {% endfor %}
     </div>
 
-    <!-- Reset Password Form -->
-    <form action="/open-account" method="POST">
-        <!-- Hidden field for token -->
-        <label for="Name">Name</label>
-        <input type="name" id="name" name="name" required>
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" required>
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" required>
-        <label for="newPassword">New Password</label>
-        <input type="password" id="newPassword" name="newPassword" required placeholder="Enter your new password">
+    <form action="/add-user" method="POST">
+        <!-- Admin First Name -->
+        <label for="fname">First Name</label>
+        <input type="text" id="fname" name="fname" required placeholder="Enter first name">
 
-        <label for="confirmPassword">Confirm New Password</label>
-        <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Re-enter your new password">
+        <!-- User Last Name -->
+        <label for="lname">Last Name</label>
+        <input type="text" id="lname" name="lname" required placeholder="Enter last name">
 
+        <!-- User Email -->
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required placeholder="Enter email address">
+
+        <!-- User Phone Number -->
+        <label for="phonenum">Phone Number</label>
+        <input type="text" id="phonenum" name="phonenum" required placeholder="Enter phone number">
+
+        <!-- User Phone Carrier -->
+        <label for="carrier">Phone Carrier</label>
+        <input type="text" id="carrier" name="carrier" required placeholder="Enter phone carrier">
+
+        <!-- User Password -->
+        <label for="pw">Password</label>
+        <input type="password" id="pw" name="pw" required placeholder="Enter password">
+
+        <!-- Date of Birth -->
+        <label for="dob">Date of Birth</label>
+        <input type="date" id="dob" name="dob" required placeholder="Select date of birth">
+
+        <!-- Billing Address -->
+        <label for="billing_address">Billing Address</label>
+        <textarea id="billing_address" name="billing_address" required placeholder="Enter billing address" rows="4"></textarea>
+
+        <!-- Submit Button -->
         <div class="smallerbuttoncenter">
-            <input type="submit" value="Reset Password">
+            <input type="submit" value="Add User">
         </div>
     </form>
-
-    <!-- Additional Note or Message -->
-    <div class="centertextleft">
-        <p>If you didn't request a password reset, please ignore this message.</p>
-    </div>
 </body>
-
 </html>

@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/smtp"
+	"regexp"
 
 	"github.com/flosch/pongo2/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +22,14 @@ func readEnv(filepath string) map[string]string {
 	env, err := godotenv.Read(filepath)
 	handle(err)
 	return env
+}
+
+func stripNonAlphanumeric(input string) string {
+	// Create a regular expression to match non-alphanumeric characters
+	re := regexp.MustCompile("[^a-zA-Z0-9]")
+
+	// Replace all non-alphanumeric characters with an empty string
+	return re.ReplaceAllString(input, "")
 }
 
 // Helper func that acts as a context manager to open a new connection to the database
@@ -61,6 +70,16 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 	}
 }
 
+// Helper function to add a flash message to the flash session
+func AddFlash(r *http.Request, w http.ResponseWriter, msg string) {
+	flashSession, err2 := store.Get(r, "flash-session")
+	handle(err2)
+
+	flashSession.AddFlash(msg)
+	err2 = flashSession.Save(r, w)
+	handle(err2)
+}
+
 // Helper func to retrieve flashes
 func RetrieveFlashes(r *http.Request, w http.ResponseWriter) []interface{} {
 	session, err := store.Get(r, "flash-session")
@@ -71,7 +90,7 @@ func RetrieveFlashes(r *http.Request, w http.ResponseWriter) []interface{} {
 	return flashes
 }
 
-func SendEmail(endemail string, subject string, body string) (error) {
+func SendEmail(endemail string, subject string, body string) error {
 	emailSender = env["EMAIL_SENDER"] // Read email sender from environment
 	emailPassword = env["EMAIL_PASSWORD"]
 
