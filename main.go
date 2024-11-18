@@ -107,6 +107,7 @@ func main() {
 
 	// Serve static content
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	http.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("./scripts"))))
 
 	// Routes
 	http.HandleFunc("/", index)
@@ -122,6 +123,7 @@ func main() {
 	http.HandleFunc("/open-account", openAccount)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/list-accounts", listAccounts)
+	http.HandleFunc("/list-potential-emails", listPotentialEmails)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -420,7 +422,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			// log.Println(actualCode)
+			log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -736,6 +738,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func listAccounts(w http.ResponseWriter, r *http.Request) {
+	log.Println("called list Accounts function")
 	session, err := store.Get(r, "current-session")
 	handle(err)
 	val, ok := session.Values["logged-in"]
@@ -820,4 +823,51 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(jsonBytes)
+}
+
+func listPotentialEmails(w http.ResponseWriter, r *http.Request){
+	log.Println("called Potential Emails function")
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	loggedIn := false
+	if ok {
+		loggedIn = val.(*LogInSessionCookie).LoggedIn
+	}
+	if !loggedIn {
+		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
+		return
+	}
+	if val.(*LogInSessionCookie).ProfileType != "employee" {
+		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
+		return
+	}	
+	customerEmail := r.URL.Query().Get("email") + "%"; //% is used to search for emails that start with the given email
+	//TODO change profiledata to emails since I am just collecting emails not profiles
+	var potential_emails []string
+	log.Println("customerEmail is " , customerEmail);
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		query := `SELECT email FROM profiles WHERE email LIKE $1 AND profile_type = 'customer' ORDER BY email LIMIT 20`  
+		rows , _ := conn.Query(context.Background() , query , customerEmail)
+		if(err != nil){
+			return err
+		}
+		defer rows.Close()
+		for rows.Next(){
+			var potential_email string
+			if err := rows.Scan(&potential_email); err != nil {
+				http.Error(w, "Server error", http.StatusInternalServerError)
+           		return fmt.Errorf("could not scan row: %v", err)
+			}
+			potential_emails = append(potential_emails , potential_email)
+		}
+		return nil		
+	})
+    potential_emails_JSON, err := json.Marshal(potential_emails)
+	if err != nil {
+		handle(err, "Failed to generate JSON")
+	}
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(potential_emails_JSON)
+	log.Println("potential emails are " , potential_emails)
 }
