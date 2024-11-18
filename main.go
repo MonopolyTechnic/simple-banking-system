@@ -422,7 +422,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			log.Println(actualCode)
+			//log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -738,7 +738,6 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func listAccounts(w http.ResponseWriter, r *http.Request) {
-	log.Println("called list Accounts function")
 	session, err := store.Get(r, "current-session")
 	handle(err)
 	val, ok := session.Values["logged-in"]
@@ -826,7 +825,6 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func listPotentialEmails(w http.ResponseWriter, r *http.Request){
-	log.Println("called Potential Emails function")
 	session, err := store.Get(r, "current-session")
 	handle(err)
 	val, ok := session.Values["logged-in"]
@@ -843,9 +841,7 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request){
 		return
 	}	
 	customerEmail := r.URL.Query().Get("email") + "%"; //% is used to search for emails that start with the given email
-	//TODO change profiledata to emails since I am just collecting emails not profiles
 	var potential_emails []string
-	log.Println("customerEmail is " , customerEmail);
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 		query := `SELECT email FROM profiles WHERE email LIKE $1 AND profile_type = 'customer' ORDER BY email LIMIT 20`  
 		rows , _ := conn.Query(context.Background() , query , customerEmail)
@@ -869,5 +865,4 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request){
 	}
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(potential_emails_JSON)
-	log.Println("potential emails are " , potential_emails)
 }
