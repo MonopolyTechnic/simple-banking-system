@@ -60,13 +60,15 @@
         </section>
 
         <section class="search-section">
-            <div class="search-box">
-                <form onsubmit="submitSearchForm(this); return false" method="GET" class="search-form" id = "search-form1">
-                    <label for="email" class="search-label">Search for account by email</label>
-                    <input type="email" id="email" name="email" class="input-field" required>
-                </form>
+            <div class = "search-with-dropdown">
+                <div class="search-box">
+                    <form onsubmit="submitSearchForm(this); return false" method="GET" class="search-form" id = "search-form1">
+                        <label for="email" class="search-label">Search for account by email</label>
+                        <input type="email" id="email" name="email" class="input-field" required>
+                    </form>
+                </div>
+                <ul id="emailSearchList" style="display: none;" class = "search-results-preview"></ul>
             </div>
-            <ul id="emailSearchList" style="display: none;"></ul>
             <div class="search-results">
                 <table>
                     <thead>

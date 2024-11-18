@@ -1,6 +1,9 @@
-const email_input = document.getElementById('email')
+const searchBar = document.getElementById('email')
+const searchPreviewList = document.getElementById('emailSearchList');
+
 let typingTimeout;
-email_input.addEventListener("input" , () => {
+const delay = 1000; //time after you stop typing to make a search query
+searchBar.addEventListener("input" , () => {
     // Clear the previous timeout (if any)
     clearTimeout(typingTimeout);
 
@@ -18,9 +21,18 @@ email_input.addEventListener("input" , () => {
             console.log(`data is of type ${typeof data}`);
             data.forEach(email => {
                 const li = document.createElement('li');
+                li.classList.add('search-result-preview');
                 li.textContent = email;
                 emailSearchList.appendChild(li);
             });
         }
-    }, 1000);
+    }, delay);
 });
+console.log(`searchPreview list is ${searchPreviewList}`);
+searchPreviewList.addEventListener('click', (event) =>{
+    console.log("received a click");
+    if (event.target.tagName.toLowerCase() === 'li') {
+        searchBar.value = event.target.textContent;
+    }
+    searchPreviewList.innerHTML = '';
+})
