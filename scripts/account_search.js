@@ -13,13 +13,10 @@ searchBar.addEventListener("input" , () => {
         //after a 1 second delay of no typing, search database for email in form
         emailSearchList.innerHTML = ''; // Clear search results
         const form = document.getElementById('search-form1');
-        console.log(`form is ${form}`);
         const email = new FormData(form, null).get('email');
         const data = await fetch(`/list-potential-emails?email=${email}`).then(res => res.json()).catch(console.error);
         if(data){
             emailSearchList.style.display = 'block';
-            console.log(`data is ${data}`);
-            console.log(`data is of type ${typeof data}`);
             data.forEach(email => {
                 const li = document.createElement('li');
                 li.classList.add('search-result-preview');
@@ -29,9 +26,7 @@ searchBar.addEventListener("input" , () => {
         }
     }, delay);
 });
-console.log(`searchPreview list is ${searchPreviewList}`);
 searchPreviewList.addEventListener('click', (event) =>{
-    console.log("received a click");
     if (event.target.tagName.toLowerCase() === 'li') {
         searchBar.value = event.target.textContent;
         searchPreviewList.innerHTML = '';
