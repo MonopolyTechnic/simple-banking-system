@@ -90,7 +90,7 @@
             console.log("email is ", email);
             const data = await fetch(`/list-accounts?email=${email}`).then(res => res.json()).catch(console.error);
             if (data) {
-                const tbody = form.parentElement.parentElement.querySelector(".search-results > table tbody");
+                const tbody = form.parentElement.parentElement.parentElement.querySelector(".search-results > table tbody");
                 tbody.innerHTML = '';
                 for (const item of data) {
                     const row = tbody.insertRow(-1);
