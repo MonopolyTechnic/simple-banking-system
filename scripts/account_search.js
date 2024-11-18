@@ -1,5 +1,6 @@
 const searchBar = document.getElementById('email')
 const searchPreviewList = document.getElementById('emailSearchList');
+const form = document.getElementById('search-form1');
 
 let typingTimeout;
 const delay = 1000; //time after you stop typing to make a search query
@@ -33,6 +34,7 @@ searchPreviewList.addEventListener('click', (event) =>{
     console.log("received a click");
     if (event.target.tagName.toLowerCase() === 'li') {
         searchBar.value = event.target.textContent;
+        searchPreviewList.innerHTML = '';
+        form.onsubmit();
     }
-    searchPreviewList.innerHTML = '';
 })
