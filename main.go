@@ -834,7 +834,6 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 
 		// Extract the data from the form
 		transactionType := r.FormValue("transaction_type")
-		log.Println(transactionType)
 		if transactionType != "deposit" && transactionType != "withdraw" {
 			AddFlash(r, w, "Invalid transaction type.")
 			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
@@ -844,9 +843,8 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Extract transaction amount
 		amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
 
-		// Insert the new user into the database
-		// BUG: when amount is not a whole number, for some reason it doesn't include the cents
-		// TODO: figure out how to execute a postgres transaction so the
+		// Create the transaction and update the account balance
+		// TODO: figure out how to execute a postgres transaction so both queries must run to be committed
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			_, err := conn.Exec(
 				context.Background(),
@@ -861,9 +859,9 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 				UPDATE accounts SET balance=(
 					SELECT balance + (
 						CASE
-							WHEN $1='deposit' THEN $3
-							WHEN $1='withdraw' THEN -1 * $3
-							ELSE $3
+							WHEN $1='deposit' THEN $3::numeric
+							WHEN $1='withdraw' THEN -1 * $3::numeric
+							ELSE $3::numeric
 						END
 					)
 					FROM accounts WHERE account_num=$2
