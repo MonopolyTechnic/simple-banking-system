@@ -122,6 +122,7 @@ func main() {
 	http.HandleFunc("/open-account", openAccount)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/list-accounts", listAccounts)
+	http.HandleFunc("/make-transaction", makeTransaction)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -820,4 +821,83 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(jsonBytes)
+}
+
+func makeTransaction(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		// Parse form data
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "Unable to parse form data", http.StatusBadRequest)
+			return
+		}
+
+		// Extract the data from the form
+		transactionType := r.FormValue("transaction_type")
+		log.Println(transactionType)
+		if transactionType != "deposit" && transactionType != "withdraw" {
+			AddFlash(r, w, "Invalid transaction type.")
+			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
+			return
+		}
+		accountNum := r.FormValue("account_number")
+		// Extract transaction amount
+		amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
+
+		// Insert the new user into the database
+		// BUG: when amount is not a whole number, for some reason it doesn't include the cents
+		// TODO: figure out how to execute a postgres transaction so the
+		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			_, err := conn.Exec(
+				context.Background(),
+				`--BEGIN;
+
+				-- INSERT INTO transactions(
+				--	type, account_num, amount
+				-- ) VALUES (
+				--	$1, $2, $3
+				--);
+
+				UPDATE accounts SET balance=(
+					SELECT balance + (
+						CASE
+							WHEN $1='deposit' THEN $3
+							WHEN $1='withdraw' THEN -1 * $3
+							ELSE $3
+						END
+					)
+					FROM accounts WHERE account_num=$2
+				)
+				WHERE account_num=$2;
+
+				--COMMIT;`,
+				transactionType,
+				accountNum,
+				amount,
+			)
+
+			// Check for error and return if any
+			if err != nil {
+				return fmt.Errorf("Failed to complete this transaction: %v", err)
+			}
+
+			// Success, return nil to indicate the user has been added
+			return nil
+		})
+		if err != nil {
+			AddFlash(r, w, err.Error())
+			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
+			return
+		}
+
+		// Flash message after successful insertion
+		AddFlash(r, w, fmt.Sprintf("%s of $%.2f completed successfully!", strings.Title(transactionType), amount))
+
+		// Respond with a success message
+		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+	}
+
+	// Quality of life improvement would be to somehow persist the form data for a retry
+	// Render the make transaction form (in case of GET request or on error)
+	RenderTemplate(w, "depositwithdraw.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
