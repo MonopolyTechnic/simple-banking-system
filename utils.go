@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/smtp"
 	"regexp"
-
 	"github.com/flosch/pongo2/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -23,6 +22,18 @@ func readEnv(filepath string) map[string]string {
 	handle(err)
 	return env
 }
+
+func formatBalance(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+    // Ensure the value is a float64
+    if balance, ok := value.Interface().(float64); ok {
+        // Format the float to two decimal places
+        formattedBalance := fmt.Sprintf("%.2f", balance)
+        return pongo2.AsValue(formattedBalance), nil
+    }
+    // Return an error if the value is not a float64
+    return pongo2.AsValue(0),nil
+}
+
 
 func stripNonAlphanumeric(input string) string {
 	// Create a regular expression to match non-alphanumeric characters

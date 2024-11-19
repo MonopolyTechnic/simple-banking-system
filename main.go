@@ -125,6 +125,7 @@ func main() {
 	http.HandleFunc("/user-dashboard", userDashboard)
 
 	pongo2.RegisterFilter("capitalize", capitalizeFilter)
+	pongo2.RegisterFilter("formatBalance", formatBalance)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -368,6 +369,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance); err != nil {
 				return fmt.Errorf("Error scanning account row: %v", err)
 			}
+			account.Balance = math.Round(account.Balance*100) / 100
 			// Append each account to the slice
 			accounts = append(accounts, account)
 		}
