@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS transactions(
                             NOT NULL
                             PRIMARY KEY
                             GENERATED ALWAYS AS IDENTITY  -- Starts at 1 and increases by 1 for each new row
+                            CHECK (transaction_id > 0)
     ,source_account         CHAR(16)
     ,recipient_account      CHAR(16)
     ,amount                 NUMERIC(15, 2)  -- 15 digits, with 2 of those being after the decimal
