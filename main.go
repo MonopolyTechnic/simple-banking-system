@@ -154,7 +154,6 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		if val.(*LogInSessionCookie).ProfileType == "employee" {
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
-			// TODO: redirect to accounts page instead (once it gets created)
 			http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		}
 		return
@@ -176,8 +175,7 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 		if val.(*LogInSessionCookie).ProfileType == "employee" {
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
-			// TODO: redirect to accounts page instead (once it gets created)
-			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+			http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		}
 		return
 	}
@@ -333,7 +331,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 	cookie := val.(*LogInAttemptCookie)
 	email := cookie.Email
 	var accounts []struct {
-		AccountNum string
+		AccountNum  string
 		AccountType string
 		Balance     float64
 	}
@@ -361,9 +359,9 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 		defer rows.Close()
 
-		for rows.Next(){
+		for rows.Next() {
 			var account struct {
-				AccountNum string
+				AccountNum  string
 				AccountType string
 				Balance     float64
 			}
@@ -526,7 +524,6 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 			if cookie.ProfileType == "employee" {
 				http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 			} else {
-				// TODO: redirect to accounts page instead (once it gets created)
 				http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 			}
 		} else {
@@ -580,9 +577,7 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 		// TODO: Pass in the correct name that is stored in cookies
 		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
 	} else {
-		// TODO: redirect to user accounts page instead
-		// http.Redirect(w, r, "/accounts", http.StatusSeeOther)
-		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
+		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 	}
 }
 
