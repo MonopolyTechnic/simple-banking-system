@@ -420,7 +420,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			// log.Println(actualCode)
+			//log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -685,41 +685,75 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
+		//if secondaryID is 0 , then it is not joint account and we do an insert
+		//query without secondaryID
+		if secondaryCustomerID == 0{
+			// Insert the new not joint account into the 'accounts' table
+			err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+				// Prepare SQL insert statement
+				query := `
+					INSERT INTO accounts (
+						account_num,
+						primary_customer_id,
+						account_type,
+						balance
+					) VALUES (
+						$1, $2, $3, $4
+					)`
+				log.Println("secondaryCustomerID is" , secondaryCustomerID)
+				// Execute the query
+				_, err := conn.Exec(
+					context.Background(),
+					query,
+					accountNum,          // Account number
+					primaryCustomerID,   // Primary customer ID
+					accountType,         // Account type (checking/savings)
+					balance,             // Initial balance
+				)
 
-		// Insert the new account into the 'accounts' table
-		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-			// Prepare SQL insert statement
-			query := `
-				INSERT INTO accounts (
-					account_num,
-					primary_customer_id,
-					secondary_customer_id,
-					account_type,
-					balance
-				) VALUES (
-					$1, $2, $3, $4, $5
-				)`
+				// Check for errors during the insert
+				if err != nil {
+					return fmt.Errorf("Failed to insert user into database: %v", err)
+				}
 
-			// Execute the query
-			_, err := conn.Exec(
-				context.Background(),
-				query,
-				accountNum,          // Account number
-				primaryCustomerID,   // Primary customer ID
-				secondaryCustomerID, // Secondary customer ID (can be NULL)
-				accountType,         // Account type (checking/savings)
-				balance,             // Initial balance
-			)
+				// Success, return nil to indicate the insert was successful
+				return nil
+			})
+		} else{
+			// Insert the new joint account with secondaryID into the 'accounts' table
+			err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+				// Prepare SQL insert statement
+				query := `
+					INSERT INTO accounts (
+						account_num,
+						primary_customer_id,
+						secondary_customer_id,
+						account_type,
+						balance
+					) VALUES (
+						$1, $2, $3, $4, $5
+					)`
+				log.Println("secondaryCustomerID is" , secondaryCustomerID)
+				// Execute the query
+				_, err := conn.Exec(
+					context.Background(),
+					query,
+					accountNum,          // Account number
+					primaryCustomerID,   // Primary customer ID
+					secondaryCustomerID, // Secondary customer ID (can be NULL)
+					accountType,         // Account type (checking/savings)
+					balance,             // Initial balance
+				)
 
-			// Check for errors during the insert
-			if err != nil {
-				return fmt.Errorf("Failed to insert user into database: %v", err)
-			}
+				// Check for errors during the insert
+				if err != nil {
+					return fmt.Errorf("Failed to insert user into database: %v", err)
+				}
 
-			// Success, return nil to indicate the insert was successful
-			return nil
-		})
-
+				// Success, return nil to indicate the insert was successful
+				return nil
+			})
+		}
 		if err != nil {
 			AddFlash(r, w, err.Error())
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
