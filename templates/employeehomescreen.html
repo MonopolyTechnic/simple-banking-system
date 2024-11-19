@@ -61,12 +61,44 @@
 
         <section class="search-section">
             <div class="search-box">
-                <form action="#" method="GET" class="search-form">
+                <form onsubmit="submitSearchForm(this); return false" method="GET" class="search-form">
                     <label for="email" class="search-label">Search for account by email</label>
                     <input type="email" id="email" name="email" class="input-field" required>
                 </form>
             </div>
+            <div class="search-results">
+                <table>
+                    <thead>
+                        <th>Account Number</th>
+                        <th>Primary Holder ID</th>
+                        <th>Secondary Holder ID</th>
+                        <th>Type</th>
+                        <th>Balance</th>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </main>
+    <script>
+        async function submitSearchForm(form) {
+            const email = new FormData(form, null).get('email');
+            console.log("email is ", email);
+            const data = await fetch(`/list-accounts?email=${email}`).then(res => res.json()).catch(console.error);
+            if (data) {
+                const tbody = form.parentElement.parentElement.querySelector(".search-results > table tbody");
+                tbody.innerHTML = '';
+                for (const item of data) {
+                    const row = tbody.insertRow(-1);
+                    row.insertCell(0).innerText = item.accountNum;
+                    row.insertCell(1).innerText = item.primaryCustomerId;
+                    row.insertCell(2).innerText = item.secondaryCustomerId;
+                    row.insertCell(3).innerText = item.accountType;
+                    row.insertCell(4).innerText = item.balance.toFixed(2);
+                }
+            }
+        }
+    </script>
 </body>
 </html>
