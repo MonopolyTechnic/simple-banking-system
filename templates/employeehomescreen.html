@@ -72,12 +72,14 @@
                 </div>
                 <ul id="emailSearchList" style="display: none;" class = "search-results-preview"></ul>
             </div>
-            {% for flash in flashes %}
-                {% set flashClass = flash | getFlashType %}
-                {% if flashClass == 'error' %}
-                    <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
-                {% endif %}
-            {% endfor %}
+            <div class="flash-messages">
+                {% for flash in flashes %}
+                    {% set flashClass = flash | getFlashType %}
+                    {% if flashClass == 'error' %}
+                        <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+                    {% endif %}
+                {% endfor %}
+            </div>
             <div class="search-results">
                 <table>
                     <thead>
