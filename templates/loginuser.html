@@ -13,7 +13,7 @@
         <h1>Welcome!</h1>
         <p>Enter your login details.</p>
         {% for flash in flashes %}
-            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
         {% endfor %}
     </div>
     <form action="/callback?profile_type=customer" method="POST">

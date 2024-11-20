@@ -13,7 +13,8 @@
         <h1>Welcome!</h1>
         <p>Enter your employee login details.</p>
         {% for flash in flashes %}
-            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}
+            {% set flashClass = getFlashType(flash) %}
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
         {% endfor %}
     </div>
     <form action="/callback?profile_type=employee" method="POST">

@@ -13,7 +13,7 @@
         <h1 class="h1smaller">Add New User</h1>
         <p>Enter the required details below:</p>
         {% for flash in flashes %}
-            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
         {% endfor %}
     </div>
 
