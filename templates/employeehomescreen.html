@@ -72,7 +72,7 @@
                 </div>
                 <ul id="emailSearchList" style="display: none;" class = "search-results-preview"></ul>
             </div>
-            <div class="flash-messages">
+            <div class="flash-messages" , id = "error-flash-messages">
                 {% for flash in flashes %}
                     {% set flashClass = flash | getFlashType %}
                     {% if flashClass == 'error' %}
@@ -96,11 +96,14 @@
         </section>
     </main>
     <script>
+        
+    
         async function submitSearchForm(form) {
             const email = new FormData(form, null).get('email');
             console.log("email is ", email);
             const data = await fetch(`/list-accounts?email=${email}`).then(res => res.status === 200 ? res.json() : null).catch(console.error);
             if (data) {
+                document.getElementById('error-flash-messages').innerHTML = '';
                 const tbody = form.parentElement.parentElement.parentElement.querySelector(".search-results > table tbody");
                 tbody.innerHTML = '';
                 for (const item of data) {
