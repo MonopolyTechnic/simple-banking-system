@@ -866,6 +866,9 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request){
 		}
 		return nil		
 	})
+	if(err != nil){
+		handle(err); //I think this is fine, not sure what errors could cause this
+	}
     potential_emails_JSON, err := json.Marshal(potential_emails)
 	if err != nil {
 		handle(err, "Failed to generate JSON")
