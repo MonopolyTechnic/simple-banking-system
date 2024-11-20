@@ -13,7 +13,7 @@
         <h1>Two-Factor Authentication</h1>
         <p>Please enter the code sent to your phone:</p>
         {% for flash in flashes %}
-            <p class="flash flash-error">{{flash}}</p>
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}
         {% endfor %}
     </div>
     <form action="/twofa" method="POST">

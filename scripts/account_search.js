@@ -1,3 +1,5 @@
+//for displaying dropdown of potential emails when typing in email search bar in employeehomescreen.html
+//displays dropdown after {delay} seconds of no typing
 const searchBar = document.getElementById('email')
 const searchPreviewList = document.getElementById('emailSearchList');
 const form = document.getElementById('search-form1');
