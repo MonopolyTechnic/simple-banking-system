@@ -425,7 +425,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			log.Println(actualCode)
+			//log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -502,9 +502,7 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	if val.(*LogInSessionCookie).ProfileType == "employee" {
 		// TODO: Pass in the correct name that is stored in cookies
-		var flash_msgs []interface{} = RetrieveFlashes(r, w)
-		log.Println("flash msgs is" , flash_msgs)
-		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": flash_msgs})
+		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
 	} else {
 		// TODO: redirect to user accounts page instead
 		// http.Redirect(w, r, "/accounts", http.StatusSeeOther)
