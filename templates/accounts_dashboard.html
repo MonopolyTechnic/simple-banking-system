@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Account Dashboard</title>
+    <link rel="stylesheet" href="/static/userdashboard.css">
+</head>
+<body>
+    <!-- Flash Messages -->
+    <div class="flash-messages">
+        {% for flash in flashes %}
+            <p class="flash flash-success">{{flash}}</p>
+        {% endfor %}
+    </div>
+    <h1>Welcome, {{fname}}</h1>
+
+    <!-- Navigation Bar -->
+    <div class="nav-bar">
+        <a href="#">Transfer</a>
+        <a href="#">Statements</a>
+        <a href="#">Transactions</a>
+        <a href="#">Notifications</a>
+        <a href="#">Settings</a>
+    </div>
+
+    <div class="accounts-container">
+        {% for account in acclist %}
+            <!-- Account Card for Each Account -->
+            <div class="account-card">
+                <h3>{{ account.AccountType | capitalize }} Account</h3>
+                <p>Account Number: {{ account.AccountNum }}</p>
+                <p>Balance: ${{ account.Balance | formatBalance }}</p>
+                <div class="button-container">
+                    <button class="button">View Account</button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
