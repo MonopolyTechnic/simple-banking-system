@@ -422,7 +422,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			//log.Println(actualCode)
+			log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -485,6 +485,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	// Redirect to login if not logged in yet
+	
 	session, err := store.Get(r, "current-session")
 	handle(err)
 	val, ok := session.Values["logged-in"]
@@ -496,10 +497,11 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
 		return
 	}
-
 	if val.(*LogInSessionCookie).ProfileType == "employee" {
 		// TODO: Pass in the correct name that is stored in cookies
-		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
+		var flash_msgs []interface{} = RetrieveFlashes(r, w)
+		log.Println("flash msgs is" , flash_msgs)
+		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": flash_msgs})
 	} else {
 		// TODO: redirect to user accounts page instead
 		// http.Redirect(w, r, "/accounts", http.StatusSeeOther)
@@ -785,7 +787,9 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		handle(err, "Query failed")
+		AddFlash(r, w, "No matching email.")
+		http.Error(w, "No matching email", http.StatusNotFound)
+		return
 	}
 
 	type JSONAccount struct {

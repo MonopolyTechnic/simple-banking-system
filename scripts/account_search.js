@@ -29,7 +29,7 @@ searchBar.addEventListener("input" , () => {
 searchPreviewList.addEventListener('click', (event) =>{
     if (event.target.tagName.toLowerCase() === 'li') {
         searchBar.value = event.target.textContent;
-        searchPreviewList.innerHTML = '';
         form.onsubmit();
+        searchPreviewList.innerHTML = '';
     }
 })

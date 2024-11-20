@@ -88,7 +88,7 @@
         async function submitSearchForm(form) {
             const email = new FormData(form, null).get('email');
             console.log("email is ", email);
-            const data = await fetch(`/list-accounts?email=${email}`).then(res => res.json()).catch(console.error);
+            const data = await fetch(`/list-accounts?email=${email}`).then(res => res.status === 200 ? res.json() : null).catch(console.error);
             if (data) {
                 const tbody = form.parentElement.parentElement.parentElement.querySelector(".search-results > table tbody");
                 tbody.innerHTML = '';
@@ -100,6 +100,10 @@
                     row.insertCell(3).innerText = item.accountType;
                     row.insertCell(4).innerText = item.balance.toFixed(2);
                 }
+            }
+            else{
+                console.log("in else statement")
+                window.location.replace("/employee-dashboard")
             }
         }
     </script>
