@@ -123,6 +123,7 @@ func main() {
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/list-accounts", listAccounts)
 	http.HandleFunc("/user-dashboard", userDashboard)
+	http.HandleFunc("/transaction-history", transactionHistory)
 
 	pongo2.RegisterFilter("capitalize", capitalizeFilter)
 	pongo2.RegisterFilter("formatBalance", formatBalance)
@@ -385,6 +386,158 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("accounts: %+v", accounts)
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+}
+
+func transactionHistory(w http.ResponseWriter, r *http.Request){
+	attemptSession, err := store.Get(r, "login-attempt-session")
+	handle(err)
+	val, ok := attemptSession.Values["data"]
+	if !ok {
+		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+		return
+	}
+	// Valid sign-in session
+	cookie := val.(*LogInAttemptCookie)
+	email := cookie.Email
+    var accounts []struct {
+        number   string
+        outgoing []transaction
+        incoming []transaction
+    }
+	var name string
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		// Query to get the customer ID for the primary customer email
+		var id int
+		err := conn.QueryRow(
+			context.Background(),
+			`SELECT first_name, id FROM profiles WHERE email = $1`,
+			email,
+		).Scan(&name, &id)
+		if err != nil {
+			return fmt.Errorf("Invalid email: %s", email)
+		}
+		accrows, err := conn.Query(
+			context.Background(),
+			`SELECT account_num FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1`,
+			id, // Use the customer ID obtained earlier
+		)
+
+		if err != nil {
+			return fmt.Errorf("Invalid return from accounts: %s", email)
+		}
+		defer accrows.Close()
+		for accrows.Next(){
+			outgoing := []transaction{}
+			incoming := []transaction{}
+			var accnum string
+			if err := accrows.Scan(&accnum); err != nil {
+				return fmt.Errorf("Error getting account: %v", err)
+			}
+			rows, err := conn.Query(
+				context.Background(),
+				`SELECT source_account, recipient_account, amount, transaction_type, transaction_timestamp FROM transactions WHERE source_account = $1 OR recipient_account = $1`,
+				accnum, // Use the customer ID obtained earlier
+			)
+	
+			if err != nil {
+				return fmt.Errorf("Invalid return from accounts: %s", email)
+			}
+			defer rows.Close()
+	
+			for rows.Next() {
+				var sc string
+				var rc string
+				var tmp struct {
+					AccNum string
+					Type string
+					Amount float64
+					Date time.Time
+				}
+				if err := rows.Scan(&sc, &rc, &tmp.Amount, &tmp.Type, &tmp.Date); err != nil {
+					return fmt.Errorf("Error scanning account row: %v", err)
+				}
+				if sc == accnum {
+					tmp.AccNum = rc
+				} else {
+					tmp.AccNum = sc
+				}
+				var othername string
+				if tmp.AccNum == ""{
+					if sc == "" {
+						othername = "ATM DEPOSIT"
+					} else {
+						othername = "ATM WITHDRAWAL"
+					}
+				} else {
+					var pcid int
+					var scid int
+					err := conn.QueryRow(
+						context.Background(),
+						`SELECT primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
+						tmp.AccNum, // Use the customer ID obtained earlier
+					).Scan(&pcid, &scid)
+					if err != nil {
+						return fmt.Errorf("Account Number cannot be displayed.")
+					}
+					var fn string
+					var mn string
+					var ln string
+					err = conn.QueryRow(
+						context.Background(),
+						`SELECT first_name, middle_name, last_name FROM profiles WHERE id = $1`,
+						pcid, // Use the customer ID obtained earlier
+					).Scan(&fn, &mn, &ln)
+					if err != nil {
+						return fmt.Errorf("Name of account %s cannot be displayed.", pcid)
+					}
+					othername = fn + " " + mn + " " + ln
+					if (scid != 0) {
+						othername = othername + ", "
+						err := conn.QueryRow(
+							context.Background(),
+							`SELECT first_name, middle_name, last_name FROM profiles WHERE id = $1`,
+							scid, // Use the customer ID obtained earlier
+						).Scan(&fn, &mn, &ln)
+						if err != nil {
+							return fmt.Errorf("Name of account %s cannot be displayed.", pcid)
+						}
+						othername = othername + fn + " " + mn + " " + ln
+					}
+				} 
+				var tran  = transaction{
+					Name: othername,
+					Type: tmp.Type,
+					Amount: tmp.Amount,
+					Date: tmp.Date,
+				}
+				if (tran.Type == "withdraw") {
+					outgoing = append(outgoing, tran)
+				} else {
+					incoming = append(incoming, tran)
+				}
+			}
+			var acc struct{
+				number   string
+				outgoing []transaction
+				incoming []transaction
+			}
+			acc.number = accnum
+			acc.outgoing = outgoing
+			acc.incoming = incoming
+			accounts = append(accounts, acc)
+		}
+		if err := accrows.Err(); err != nil {
+			return fmt.Errorf("Error while iterating over account rows: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		AddFlash(r, w, err.Error())
+		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
+		return
+	}
+	log.Printf("accounts: %+v", accounts)
+	RenderTemplate(w, "transaction_history.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
 func capitalizeFilter(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {

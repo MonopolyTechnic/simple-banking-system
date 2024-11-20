@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"time"
 	"net/http"
 	"net/smtp"
 	"regexp"
@@ -274,6 +275,13 @@ type LogInAttemptCookie struct {
 	ProfileType  string
 	PhoneNumber  string
 	PhoneCarrier string
+}
+
+type transaction struct {
+	Name string
+	Type string
+	Amount float64
+	Date time.Time
 }
 
 // Helper func to handle errors
