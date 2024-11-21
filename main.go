@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -179,18 +178,6 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
 
-func generateResetToken() string {
-	// Generate a random token (you could use a stronger method, like UUID or a hash)
-	rand.Seed(time.Now().UnixNano())
-	const tokenLength = 32
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	var token []byte
-	for i := 0; i < tokenLength; i++ {
-		token = append(token, charset[rand.Intn(len(charset))])
-	}
-	return string(token)
-}
-
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "reset-password-session")
 	if err != nil {
@@ -222,24 +209,6 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/postresetpassword", http.StatusSeeOther)
 	}
 	RenderTemplate(w, "forgotpassword.html")
-}
-
-// Returns email, true if the token is valid, otherwise returns "", false
-func isValidToken(w http.ResponseWriter, r *http.Request, token string) (string, bool) {
-	// Check if the token exists
-	session, err := store.Get(r, "reset-password-session")
-	if err != nil {
-		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
-		return "", false
-	}
-	val, exists := session.Values[token]
-	var email string
-	if val != nil {
-		email = val.(string)
-	} else {
-		email = ""
-	}
-	return email, exists
 }
 
 func resetPassword(w http.ResponseWriter, r *http.Request) {
@@ -384,18 +353,6 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
-}
-
-func capitalizeFilter(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
-	// Ensure the value is a string
-	if str, ok := value.Interface().(string); ok {
-		// Capitalize the first letter and return the value
-		if len(str) > 0 {
-			return pongo2.AsValue(strings.ToUpper(string(str[0])) + str[1:]), nil
-		}
-	}
-	// If it's not a string, return it as is
-	return pongo2.AsValue(value.Interface()), nil
 }
 
 // Callback endpoint for login requests

@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/smtp"
 	"regexp"
+	"strings"
+	"time"
 
 	"github.com/flosch/pongo2/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,6 +24,18 @@ func readEnv(filepath string) map[string]string {
 	env, err := godotenv.Read(filepath)
 	handle(err)
 	return env
+}
+
+func capitalizeFilter(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	// Ensure the value is a string
+	if str, ok := value.Interface().(string); ok {
+		// Capitalize the first letter and return the value
+		if len(str) > 0 {
+			return pongo2.AsValue(strings.ToUpper(string(str[0])) + str[1:]), nil
+		}
+	}
+	// If it's not a string, return it as is
+	return pongo2.AsValue(value.Interface()), nil
 }
 
 func formatBalance(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
@@ -134,6 +148,36 @@ func getFlashMessage(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *
 	handle(errors.New("Flash message is not of the correct format , message should be a string"))
 	log.Println("should never print this utils.getFlashMessage")
 	return pongo2.AsValue("will never reach here"), nil
+}
+
+func generateResetToken() string {
+	// Generate a random token (you could use a stronger method, like UUID or a hash)
+	rand.Seed(time.Now().UnixNano())
+	const tokenLength = 32
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	var token []byte
+	for i := 0; i < tokenLength; i++ {
+		token = append(token, charset[rand.Intn(len(charset))])
+	}
+	return string(token)
+}
+
+// Returns email, true if the token is valid, otherwise returns "", false
+func isValidToken(w http.ResponseWriter, r *http.Request, token string) (string, bool) {
+	// Check if the token exists
+	session, err := store.Get(r, "reset-password-session")
+	if err != nil {
+		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
+		return "", false
+	}
+	val, exists := session.Values[token]
+	var email string
+	if val != nil {
+		email = val.(string)
+	} else {
+		email = ""
+	}
+	return email, exists
 }
 
 func SendEmail(endemail string, subject string, body string) error {
