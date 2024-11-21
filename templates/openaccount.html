@@ -14,7 +14,7 @@
         <p>Fill out the details to open a new account</p>
         <!-- Flash Message Section (if any) -->
         {% for flash in flashes %}
-            <p class="flash flash-error">{{ flash }}</p>
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
         {% endfor %}
     </div>
 

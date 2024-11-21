@@ -53,3 +53,23 @@ CREATE TABLE IF NOT EXISTS accounts(
     ,FOREIGN KEY (secondary_customer_id)
         REFERENCES profiles(id)
 );
+CREATE TABLE IF NOT EXISTS transactions(
+    transaction_id          BIGINT
+                            NOT NULL
+                            PRIMARY KEY
+                            GENERATED ALWAYS AS IDENTITY  -- Starts at 1 and increases by 1 for each new row
+                            CHECK (transaction_id > 0)
+    ,source_account         CHAR(16)
+    ,recipient_account      CHAR(16)
+    ,amount                 NUMERIC(15, 2)  -- 15 digits, with 2 of those being after the decimal
+                            NOT NULL
+                            CHECK (amount >= 0)
+    ,transaction_type       VARCHAR(8)
+                            CHECK (transaction_type IN ('deposit', 'withdraw'))
+    ,transaction_timestamp  TIMESTAMP
+                            NOT NULL
+    ,FOREIGN KEY (source_account)
+        REFERENCES accounts(account_num)
+    ,FOREIGN KEY (recipient_account)
+        REFERENCES accounts(account_num)
+);

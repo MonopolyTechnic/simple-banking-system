@@ -33,6 +33,22 @@ body {
     text-align: center;
 }
 
+/* Container to center content */
+.centered-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+}
+
+.centered-container h1,
+.centered-container p {
+    display: block;
+    margin: 10px 0; /* Adds space between each element */
+}
+
 .auth-code-input {
     width: 100%;
     padding: 12px;
@@ -117,7 +133,7 @@ input[type="submit"] {
     background-color: #545F71;
     color: white;
     border: 2px solid #e7e7e7;
-    padding: 0px 0px; /* Adjust padding to increase button size */
+    padding: 10px 0px; /* Adjust padding to increase button size */
     font-family: Arial, Helvetica, sans-serif;
     font-style: normal;
     width: 220px;
@@ -130,10 +146,22 @@ input[type="submit"]:hover {
     background-color: #545F71;
 }
 
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px; /* Adds space between the input fields */
+    border: 1px solid #545F71;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
 
 form {
-    max-width: 300px; /* Limit the width of the form */
-    align-content: center;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align to the left */
+    max-width: 350px; /* Limit the width of the form */
+    margin: 0 auto; /* Center the form on the page */
 }
 
 /* Ensure inputs have consistent spacing */
@@ -195,6 +223,7 @@ h1 {
     font-weight: 750;
     font-size: 36px;
     line-height: 75%;
+    text-align:center;
 }
 
 .flash-error {

@@ -13,7 +13,7 @@
         <h1>Welcome!</h1>
         <p>Enter your employee login details.</p>
         {% for flash in flashes %}
-            <p class="flash flash-error">{{flash}}</p>
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
         {% endfor %}
     </div>
     <form action="/callback?profile_type=employee" method="POST">
@@ -25,6 +25,7 @@
             <div class="buttoncenter">
                 <input type="submit" value="Sign in">
                 <p><b><a href="/forgot-password">Forgot Password</a></b></p>
+                <p><b><a href="/forgot-email">Forgot Email</a></b></p>
             </div>
         </a>
     </form>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" href="../static/style.css"> <!-- Link to your CSS -->
+    <title>Monopoly-Technic</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div class="centertextleft">
+        <h1 class="h1smaller" style="text-align:center">Forgot email?</h1>
+        <p>Enter your information and we will help you recover your password.</p>
+        {% for flash in flashes %}
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+        {% endfor %}
+    </div>
+    <form action="/verify-email-to-recover" method="POST">
+        <label for="name">First Name</label>
+        <input type="text" id="fname" name="fname" required>
+
+        <label for="name">Last Name</label>
+        <input type="text" id="lname" name="lname" required>
+        
+        <label for="phone">Date of Birth</label>
+        <input type="date" id="dob" name="dob" required>
+
+        <div class="smallerbuttoncenter">
+            <input type="submit" value="Verify">
+        </div>
+    </form>
+    
+</body>
+</html>
