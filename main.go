@@ -124,6 +124,9 @@ func main() {
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/list-accounts", listAccounts)
 	http.HandleFunc("/list-potential-emails", listPotentialEmails)
+	http.HandleFunc("/forgot-email", forgotEmail)
+	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
+	http.HandleFunc("/post-recovered-email", postRecoveredEmail)
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
@@ -568,7 +571,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	// Redirect to login if not logged in yet
-	
+
 	session, err := store.Get(r, "current-session")
 	handle(err)
 	val, ok := session.Values["logged-in"]
@@ -667,7 +670,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})
 		if err != nil {
-			AddFlash(r, w, "e" + err.Error())
+			AddFlash(r, w, "e"+err.Error())
 			http.Redirect(w, r, "/add-user", http.StatusSeeOther)
 			return
 		}
@@ -747,7 +750,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		})
 
 		if err != nil {
-			AddFlash(r, w, "e" + err.Error())
+			AddFlash(r, w, "e"+err.Error())
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
@@ -770,7 +773,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		}
 		//if secondaryID is 0 , then it is not joint account and we do an insert
 		//query without secondaryID
-		if secondaryCustomerID == 0{
+		if secondaryCustomerID == 0 {
 			// Insert the new not joint account into the 'accounts' table
 			err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 				// Prepare SQL insert statement
@@ -783,15 +786,15 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 					) VALUES (
 						$1, $2, $3, $4
 					)`
-				log.Println("secondaryCustomerID is" , secondaryCustomerID)
+				log.Println("secondaryCustomerID is", secondaryCustomerID)
 				// Execute the query
 				_, err := conn.Exec(
 					context.Background(),
 					query,
-					accountNum,          // Account number
-					primaryCustomerID,   // Primary customer ID
-					accountType,         // Account type (checking/savings)
-					balance,             // Initial balance
+					accountNum,        // Account number
+					primaryCustomerID, // Primary customer ID
+					accountType,       // Account type (checking/savings)
+					balance,           // Initial balance
 				)
 
 				// Check for errors during the insert
@@ -802,7 +805,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 				// Success, return nil to indicate the insert was successful
 				return nil
 			})
-		} else{
+		} else {
 			// Insert the new joint account with secondaryID into the 'accounts' table
 			err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 				// Prepare SQL insert statement
@@ -816,7 +819,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 					) VALUES (
 						$1, $2, $3, $4, $5
 					)`
-				log.Println("secondaryCustomerID is" , secondaryCustomerID)
+				log.Println("secondaryCustomerID is", secondaryCustomerID)
 				// Execute the query
 				_, err := conn.Exec(
 					context.Background(),
@@ -838,7 +841,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		if err != nil {
-			AddFlash(r, w, "e" + err.Error())
+			AddFlash(r, w, "e"+err.Error())
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
@@ -941,7 +944,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
-func listPotentialEmails(w http.ResponseWriter, r *http.Request){
+func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "current-session")
 	handle(err)
 	val, ok := session.Values["logged-in"]
@@ -956,33 +959,96 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request){
 	if val.(*LogInSessionCookie).ProfileType != "employee" {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
-	}	
-	customerEmail := r.URL.Query().Get("email") + "%"; //% is used to search for emails that start with the given email
+	}
+	customerEmail := r.URL.Query().Get("email") + "%" //% is used to search for emails that start with the given email
 	var potential_emails []string
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-		query := `SELECT email FROM profiles WHERE email LIKE $1 AND profile_type = 'customer' ORDER BY email LIMIT 20`  
-		rows , _ := conn.Query(context.Background() , query , customerEmail)
-		if(err != nil){
+		query := `SELECT email FROM profiles WHERE email LIKE $1 AND profile_type = 'customer' ORDER BY email LIMIT 20`
+		rows, _ := conn.Query(context.Background(), query, customerEmail)
+		if err != nil {
 			return err
 		}
 		defer rows.Close()
-		for rows.Next(){
+		for rows.Next() {
 			var potential_email string
 			if err := rows.Scan(&potential_email); err != nil {
 				http.Error(w, "Server error", http.StatusInternalServerError)
-           		return fmt.Errorf("could not scan row: %v", err)
+				return fmt.Errorf("could not scan row: %v", err)
 			}
-			potential_emails = append(potential_emails , potential_email)
+			potential_emails = append(potential_emails, potential_email)
 		}
-		return nil		
+		return nil
 	})
-	if(err != nil){
-		handle(err); //I think this is fine, not sure what errors could cause this
+	if err != nil {
+		handle(err) //I think this is fine, not sure what errors could cause this
 	}
-    potential_emails_JSON, err := json.Marshal(potential_emails)
+	potential_emails_JSON, err := json.Marshal(potential_emails)
 	if err != nil {
 		handle(err, "Failed to generate JSON")
 	}
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(potential_emails_JSON)
+}
+
+func forgotEmail(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "forgotemail.html")
+}
+
+func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
+	// Parse form values
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Unable to process form data", http.StatusBadRequest)
+		return
+	}
+
+	fname := r.FormValue("fname")
+	lname := r.FormValue("lname")
+	dob := r.FormValue("dob")
+
+	log.Printf("Received user info: fname=%s, lname=%s, dob=%s\n", fname, lname, dob)
+
+	// Open database connection using OpenDBConnection
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		// Query the database for the user
+		query := `SELECT email FROM profiles WHERE first_name = $1 AND last_name = $2 AND date_of_birth = $3`
+		var email string
+		err := conn.QueryRow(context.Background(), query, fname, lname, dob).Scan(&email)
+
+		// Handle case where no rows are found
+		if err != nil {
+			AddFlash(r, w, "eInformation not linked to an existing account.")
+			RenderTemplate(w, "forgotemail.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+			return nil
+		}
+
+		// If we got here, it means the email was found
+		// Mask the email
+		emailParts := strings.Split(email, "@")
+		var maskedEmail string
+		if len(emailParts) > 1 {
+			username := emailParts[0]
+			domain := emailParts[1]
+			if len(username) > 1 {
+				username = string(username[0]) + strings.Repeat("*", len(username)-1)
+			}
+			maskedEmail = username + "@" + domain
+		}
+
+		log.Println("Masked email:", maskedEmail)
+
+		// Render template with masked email
+		RenderTemplate(w, "verifyemailtorecover.html", pongo2.Context{"MaskedEmail": maskedEmail})
+
+		return nil
+	})
+
+	// If there was any issue in opening the database connection, log it.
+	if err != nil {
+		log.Println("Error in OpenDBConnection callback:", err)
+	}
+}
+
+func postRecoveredEmail(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "postrecoveredemail.html")
 }
