@@ -839,7 +839,13 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
 			return
 		}
+		source := r.FormValue("source")
 		recipient := r.FormValue("recipient")
+		if recipient == "" {
+			AddFlash(r, w, "Recipient is a required field.")
+			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
+			return
+		}
 		// Extract transaction amount
 		amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
 
@@ -849,11 +855,13 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 			_, err := conn.Exec(
 				context.Background(),
 				fmt.Sprintf(
-					`BEGIN;
+					`DO
+					$do$
+					BEGIN
 						INSERT INTO transactions(
 							source_account, recipient_account, amount, transaction_type, transaction_timestamp
 						) VALUES (
-							NULL, '%[1]s', %[2]f::numeric, '%[3]s', NOW()
+							NULLIF('%[1]s', ''), '%[2]s', %[3]f::numeric, '%[4]s', NOW()
 						);
 
 						-- source -> recipient
@@ -861,16 +869,32 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 						UPDATE accounts SET balance=(
 							SELECT balance + (
 								CASE
-									WHEN '%[3]s'='deposit' THEN %[2]f::numeric
-									WHEN '%[3]s'='withdraw' THEN -1 * %[2]f::numeric
-									ELSE %[2]f::numeric
+									WHEN '%[4]s'='deposit' THEN %[3]f::numeric
+									WHEN '%[4]s'='withdraw' THEN -1 * %[3]f::numeric
+									ELSE %[3]f::numeric
 								END
 							)
-							FROM accounts WHERE account_num='%[1]s'
+							FROM accounts WHERE account_num='%[2]s'
 						)
-						WHERE account_num='%[1]s';
-					END;
+						WHERE account_num='%[2]s';
+
+						IF '%[1]s' <> '' THEN
+							UPDATE accounts SET balance=(
+								SELECT balance - (
+									CASE
+										WHEN '%[4]s'='deposit' THEN %[3]f::numeric
+										WHEN '%[4]s'='withdraw' THEN -1 * %[3]f::numeric
+										ELSE %[3]f::numeric
+									END
+								)
+								FROM accounts WHERE account_num='%[1]s'
+							)
+							WHERE account_num='%[1]s';
+						END IF;
+					END
+					$do$
 					`,
+					source,
 					recipient,
 					amount,
 					transactionType,
