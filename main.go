@@ -124,6 +124,9 @@ func main() {
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/list-accounts", listAccounts)
 	http.HandleFunc("/list-potential-emails", listPotentialEmails)
+	http.HandleFunc("/forgot-email", forgotEmail)
+	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
+	http.HandleFunc("/post-recovered-email", postRecoveredEmail)
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
@@ -131,9 +134,6 @@ func main() {
 
 	pongo2.RegisterFilter("capitalize", capitalizeFilter)
 	pongo2.RegisterFilter("formatBalance", formatBalance)
-	http.HandleFunc("/forgot-email", forgotEmail)
-	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
-	http.HandleFunc("/post-recovered-email", postrecoveredemail)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -988,4 +988,67 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(potential_emails_JSON)
+}
+
+func forgotEmail(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "forgotemail.html")
+}
+
+func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
+	// Parse form values
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Unable to process form data", http.StatusBadRequest)
+		return
+	}
+
+	fname := r.FormValue("fname")
+	lname := r.FormValue("lname")
+	dob := r.FormValue("dob")
+
+	log.Printf("Received user info: fname=%s, lname=%s, dob=%s\n", fname, lname, dob)
+
+	// Open database connection using OpenDBConnection
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		// Query the database for the user
+		query := `SELECT email FROM profiles WHERE first_name = $1 AND last_name = $2 AND date_of_birth = $3`
+		var email string
+		err := conn.QueryRow(context.Background(), query, fname, lname, dob).Scan(&email)
+
+		// Handle case where no rows are found
+		if err != nil {
+			AddFlash(r, w, "eInformation not linked to an existing account.")
+			RenderTemplate(w, "forgotemail.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+			return nil
+		}
+
+		// If we got here, it means the email was found
+		// Mask the email
+		emailParts := strings.Split(email, "@")
+		var maskedEmail string
+		if len(emailParts) > 1 {
+			username := emailParts[0]
+			domain := emailParts[1]
+			if len(username) > 1 {
+				username = string(username[0]) + strings.Repeat("*", len(username)-1)
+			}
+			maskedEmail = username + "@" + domain
+		}
+
+		log.Println("Masked email:", maskedEmail)
+
+		// Render template with masked email
+		RenderTemplate(w, "verifyemailtorecover.html", pongo2.Context{"MaskedEmail": maskedEmail})
+
+		return nil
+	})
+
+	// If there was any issue in opening the database connection, log it.
+	if err != nil {
+		log.Println("Error in OpenDBConnection callback:", err)
+	}
+}
+
+func postRecoveredEmail(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "postrecoveredemail.html")
 }

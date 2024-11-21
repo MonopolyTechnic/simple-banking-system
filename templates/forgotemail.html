@@ -12,6 +12,9 @@
     <div class="centertextleft">
         <h1 class="h1smaller" style="text-align:center">Forgot email?</h1>
         <p>Enter your information and we will help you recover your password.</p>
+        {% for flash in flashes %}
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+        {% endfor %}
     </div>
     <form action="/verify-email-to-recover" method="POST">
         <label for="name">First Name</label>
@@ -20,8 +23,8 @@
         <label for="name">Last Name</label>
         <input type="text" id="lname" name="lname" required>
         
-        <label for="phone">Phone Number</label>
-        <input type="text" id="phone" name="phone" required>
+        <label for="phone">Date of Birth</label>
+        <input type="date" id="dob" name="dob" required>
 
         <div class="smallerbuttoncenter">
             <input type="submit" value="Verify">

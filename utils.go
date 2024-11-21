@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"regexp"
+
 	"github.com/flosch/pongo2/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -24,16 +25,15 @@ func readEnv(filepath string) map[string]string {
 }
 
 func formatBalance(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
-    // Ensure the value is a float64
-    if balance, ok := value.Interface().(float64); ok {
-        // Format the float to two decimal places
-        formattedBalance := fmt.Sprintf("%.2f", balance)
-        return pongo2.AsValue(formattedBalance), nil
-    }
-    // Return an error if the value is not a float64
-    return pongo2.AsValue(0),nil
+	// Ensure the value is a float64
+	if balance, ok := value.Interface().(float64); ok {
+		// Format the float to two decimal places
+		formattedBalance := fmt.Sprintf("%.2f", balance)
+		return pongo2.AsValue(formattedBalance), nil
+	}
+	// Return an error if the value is not a float64
+	return pongo2.AsValue(0), nil
 }
-
 
 func stripNonAlphanumeric(input string) string {
 	// Create a regular expression to match non-alphanumeric characters
@@ -101,9 +101,9 @@ func RetrieveFlashes(r *http.Request, w http.ResponseWriter) []interface{} {
 	return flashes
 }
 
-//flash is expected to be a string type
-//flash is defined as "s{msg}" , or "e{msg}" where the first character denotes success or error
-//and the rest of the string is the flash message
+// flash is expected to be a string type
+// flash is defined as "s{msg}" , or "e{msg}" where the first character denotes success or error
+// and the rest of the string is the flash message
 func getFlashType(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	if str, ok := value.Interface().(string); ok {
 		if len(str) < 1 {
@@ -111,16 +111,16 @@ func getFlashType(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pon
 		}
 		var flashType string = string(str[0]) //only handles ascii
 		if flashType == "s" {
-			return pongo2.AsValue("success") , nil
-		}else if flashType == "e"{
-			return pongo2.AsValue("error") , nil
-		}else{
+			return pongo2.AsValue("success"), nil
+		} else if flashType == "e" {
+			return pongo2.AsValue("error"), nil
+		} else {
 			handle(errors.New("Flash message is not of the correct format , start character should be 's' or 'e'"))
 		}
 	}
 	handle(errors.New("Flash message is not of the correct format , message should be a string"))
 	log.Println("should never print this utils.getFlashType")
-	return pongo2.AsValue("will never reach here") , nil
+	return pongo2.AsValue("will never reach here"), nil
 }
 
 func getFlashMessage(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
@@ -129,11 +129,11 @@ func getFlashMessage(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *
 			handle(errors.New("Flash message is empty"))
 		}
 		var flashMessage string = str[1:]
-		return pongo2.AsValue(flashMessage) , nil
+		return pongo2.AsValue(flashMessage), nil
 	}
 	handle(errors.New("Flash message is not of the correct format , message should be a string"))
 	log.Println("should never print this utils.getFlashMessage")
-	return pongo2.AsValue("will never reach here") , nil
+	return pongo2.AsValue("will never reach here"), nil
 }
 
 func SendEmail(endemail string, subject string, body string) error {
