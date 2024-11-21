@@ -10,53 +10,118 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
+    <!-- Flash Messages -->
+    <div class="flash-messages">
+        {% for flash in flashes %}
+            {% set flashClass = flash | getFlashType %}
+            {% if flashClass == 'success' %}
+                <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Header Section -->
     <header>
-        <div class="top_header">
-            <div class="leftheader">
-                <a href="#home"><span class="material-icons" style="font-size: 35px;">home</span></a>
+        <div class="top-header">
+            <div class="header-left">
+                <a href="#home" class="icon-link">
+                    <span class="material-icons icon-large">home</span>
+                </a>
             </div>
-            <div class="middleheader">
-                <h2 class="black_text heading_medium">Bank name</h2>
+            <div class="header-middle">
+                <h2 class="brand-name">Bank Name</h2>
             </div>
-            <div class="rightheader">
+            <div class="header-right">
                 <nav>
-                    <ul>
-                        <li><a href="#profile"><span class="material-icons" style="font-size: 35px;">person</span></a></li>
-                        <li><a href="#settings"><span class="material-icons" style="font-size: 35px;">settings</span></a></li>
-                        <li><a href="/logout" title="Sign out"><span class="material-icons" style="font-size: 35px;">logout</span></a></li>
+                    <ul class="header-nav">
+                        <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
+                        <li><a href="#settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
+                        <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
                     </ul>
                 </nav>
             </div>
         </div>
-        <div class="bottom_header">
-            <h1>Hello, {{ fname }}!</h1>
+        <div class="header-bottom">
+            <h1 class="welcome-message">Hello, {{ fname }}!</h1>
         </div>
     </header>
-    <div class="margined_container">
-        <div class="no_margin">   
-            <div class="small_row">
-                <div class="box small_box">
-                    <h1 class="black_text heading_medium">Users</h1>
-                </div>
-                <div class="box">
-                    <button>+New User</button>
-                </div>
-                <div class="box"></div>
-                <div class="box"></div>
-                <div class="box"></div>
+
+    <!-- Main Content -->
+    <main class="content-container">
+        <section class="user-section">
+            <div class="section-header">
+                <h1 class="section-title">Users</h1>
             </div>
-            <div class="small_row">
-                <div class="box">
-                    <form>
-                        <div class = "search">
-                            <span class="search-icon material-icons" style="font-size: 35px;">search</span>
-                            <input class="search-input" type="search" placeholder="search for account by email">
-                        </div>
+            <div class="section-actions">
+                <form action="/add-user" method="GET">
+                    <button type="submit" class="btn btn-primary">+ New User</button>
+                </form>
+                <form action="/open-account" method="GET">
+                    <button type="submit" class="btn btn-secondary">Open Account</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="search-section">
+            <div class = "search-with-dropdown">
+                <div class="search-box">
+                    <form onsubmit="submitSearchForm(this); return false" method="GET" class="search-form" id = "search-form1">
+                        <label for="email" class="search-label">Search for account by email</label>
+                        <input type="email" id="email" name="email" class="input-field" required>
                     </form>
                 </div>
+                <ul id="emailSearchList" style="display: none;" class = "search-results-preview"></ul>
             </div>
-            <div class="small_row"></div>
-        </div>
-    </div>
+            <div class="flash-messages" , id = "error-flash-messages">
+                {% for flash in flashes %}
+                    {% set flashClass = flash | getFlashType %}
+                    {% if flashClass == 'error' %}
+                        <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="search-results">
+                <table>
+                    <thead>
+                        <th>Account Number</th>
+                        <th>Primary Holder ID</th>
+                        <th>Secondary Holder ID</th>
+                        <th>Type</th>
+                        <th>Balance</th>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <script>
+        
+    
+        async function submitSearchForm(form) {
+            const email = new FormData(form, null).get('email');
+            console.log("email is ", email);
+            const data = await fetch(`/list-accounts?email=${email}`).then(res => res.status === 200 ? res.json() : null).catch(console.error);
+            if (data) {
+                document.getElementById('error-flash-messages').innerHTML = '';
+                const tbody = form.parentElement.parentElement.parentElement.querySelector(".search-results > table tbody");
+                tbody.innerHTML = '';
+                for (const item of data) {
+                    const row = tbody.insertRow(-1);
+                    row.insertCell(0).innerText = item.accountNum;
+                    row.insertCell(1).innerText = item.primaryCustomerId;
+                    row.insertCell(2).innerText = item.secondaryCustomerId;
+                    row.insertCell(3).innerText = item.accountType;
+                    row.insertCell(4).innerText = item.balance.toFixed(2);
+                }
+            }
+            else{
+                console.log("in else statement")
+                window.location.replace("/employee-dashboard")
+            }
+            form.querySelector('input[name="email"]').value = '';
+        }
+    </script>
+    <script src = /scripts/account_search.js></script>
 </body>
 </html>

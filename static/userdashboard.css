@@ -1,0 +1,107 @@
+/* Normal link color */
+a {
+    color: #545F71;
+    text-decoration-line: underline;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 22px;
+}
+
+/* Hover color */
+a:hover {
+    color: red; /* Change color on hover */
+}
+
+/* Visited link color */
+a:visited {
+    color: purple; /* Change color for visited links */
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    height: 100vh; /* Full viewport height */
+    margin: 0;
+    text-align: center; /* Center text */
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.center {
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
+
+.nav-bar {
+    width: 100%;
+    background-color: #545F71;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.nav-bar a {
+    margin: 0 15px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.nav-bar a:hover {
+    color: #e7e7e7;
+}
+
+h1 {
+    font-size: 48px;
+    color: #545F71;
+    font-weight: 750;
+}
+
+.accounts-container {
+    margin-top: 30px;
+    width: 80%;
+    max-width: 600px;
+}
+
+.account-card {
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.account-card h3 {
+    color: #545F71;
+    font-weight: 600;
+    font-size: 20px;
+}
+
+.account-card p {
+    font-size: 14px;
+    color: #545F71;
+}
+
+.button-container {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.button {
+    border-radius: 10px;
+    background-color: #545F71;
+    color: white;
+    padding: 10px 20px;
+    width: 160px;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+}
+
+.button:hover {
+    background-color: #e7e7e7;
+    color: #545F71;
+}

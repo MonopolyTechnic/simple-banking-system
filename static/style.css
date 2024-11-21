@@ -164,6 +164,20 @@ form {
     margin: 0 auto; /* Center the form on the page */
 }
 
+/* Ensure inputs have consistent spacing */
+form input, form textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px; /* Space between fields */
+    border: 1px solid #545F71;
+    border-radius: 6px;
+}
+
+/* Specific styles for textarea */
+textarea {
+    resize: vertical; /* Allow users to resize the textarea vertically */
+    max-width: 400px; /* Limit width of the textarea */
+}
 
 .button-container {
     margin: 10px 0; /* Add spacing between buttons */

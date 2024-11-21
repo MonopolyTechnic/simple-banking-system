@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" href="/static/formstyle.css"> <!-- Link to CSS -->
+    <title>Open Account</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div class="centertextleft">
+        <h1 class="h1smaller">Open a New Account</h1>
+        <p>Fill out the details to open a new account</p>
+        <!-- Flash Message Section (if any) -->
+        {% for flash in flashes %}
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+        {% endfor %}
+    </div>
+
+    <form action="/open-account" method="POST">
+        <!-- Primary Customer ID -->
+        <label for="primary_customer_email">Primary Customer Email</label>
+        <input type="email" id="primary_customer_email" name="primary_customer_email" required placeholder="Enter primary customer email">
+
+        <!-- Secondary Customer ID -->
+        <label for="secondary_customer_email">Secondary Customer Email (optional)</label>
+        <input type="email" id="secondary_customer_email" name="secondary_customer_email" placeholder="Enter secondary customer email (if any)">
+
+        <!-- Account Type -->
+        <label for="account_type">Account Type</label>
+        <select id="account_type" name="account_type" required>
+            <option value="checking">Checking</option>
+            <option value="savings">Savings</option>
+        </select>
+
+        <!-- Initial Balance -->
+        <label for="balance">Initial Deposit</label>
+        <input type="number" id="balance" name="balance" required min="0" placeholder="Enter initial deposit" step="0.01">
+
+        <!-- Submit Button -->
+        <div class="smallerbuttoncenter">
+            <input type="submit" value="Open Account">
+        </div>
+    </form>
+
+</body>
+</html>

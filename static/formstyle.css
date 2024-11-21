@@ -1,0 +1,137 @@
+/* General styling for links */
+a {
+    color: #545F71;
+    text-decoration-line: underline;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 22px;
+}
+
+a:hover {
+    color: red; /* Change color on hover */
+}
+
+a:visited {
+    color: purple; /* Change color for visited links */
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Align content from the top */
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding-top: 50px; /* Adds space at the top to push content downward */
+}
+
+.centertextleft {
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    max-width: 400px; /* Limit the width of the form */
+}
+
+p {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #545F71;
+    font-weight: 500;
+}
+
+label {
+    display: block; /* Ensure labels take up full line */
+    margin-bottom: 5px;
+    font-weight: 400;
+    font-size: 14px;
+    color: #545F71;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="text"],
+select,
+input[type="submit"],
+textarea {
+    width: 100%; /* Ensure full width for form fields */
+    max-width: 400px; /* Set a max width to prevent form fields from becoming too wide */
+    padding: 10px;
+    margin-bottom: 15px; /* Space between fields */
+    border: 1px solid #545F71;
+    border-radius: 6px;
+    height: 25px; /* Set a uniform height */
+    box-sizing: border-box; /* Ensure padding is included in the height */
+}
+
+/* Ensuring select box has the same height */
+select {
+    height: 45px; /* Set the same height for the select box */
+}
+
+/* Uniform height for textarea */
+textarea {
+    resize: vertical; /* Allow users to resize the textarea vertically */
+    max-width: 400px; /* Limit width of the textarea */
+    height: 120px; /* Uniform height for textarea (can be adjusted as needed) */
+}
+
+/* Submit button styles */
+input[type="submit"] {
+    background-color: #545F71;
+    color: white;
+    border: 2px solid #e7e7e7;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 10px;
+    width: 220px;
+    height: 45px; /* Consistent height with input fields */
+    border-radius: 10px;
+}
+
+input[type="submit"]:hover {
+    background-color: #4d5760; /* Slightly darker shade for hover */
+}
+
+form {
+    max-width: 400px; /* Limit the width of the form */
+    margin: 0 auto;
+}
+
+/* Ensuring all form elements are stacked vertically */
+form label,
+form input,
+form select,
+form textarea {
+    display: block;
+    width: 100%;  /* Full width */
+    margin-bottom: 15px; /* Space between form fields */
+}
+
+/* Flash message styling */
+.flash-error {
+    color: #a8313b;
+}
+
+.flash-success {
+    color: #388f6c;
+}
+
+.flash-info {
+    color: #33618f;
+}
+
+h1, .h1smaller {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #545F71;
+    font-weight: 750;
+    text-align: center;
+}
+
+.h1smaller {
+    font-size: 36px;
+}
+
+h1 {
+    font-size: 48px;
+    line-height: 75%;
+}
