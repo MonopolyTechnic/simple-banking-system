@@ -311,6 +311,37 @@ type LogInAttemptCookie struct {
 	PhoneCarrier string
 }
 
+// SetLoggedIn is a helper function to set the login cookies
+func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAttemptCookie) {
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
+	session.Values["logged-in"] = &LogInSessionCookie{
+		LoggedIn:     true,
+		Email:        attemptCookie.Email,
+		ProfileType:  attemptCookie.ProfileType,
+		PhoneNumber:  attemptCookie.PhoneNumber,
+		PhoneCarrier: attemptCookie.PhoneCarrier,
+	}
+	err = session.Save(r, w)
+	handle(err)
+}
+
+// Returns the type of profile logged in along with a boolean indicating if the user is logged in or not
+func checkLoggedIn(r *http.Request, w http.ResponseWriter) (string, bool) {
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	loggedIn := false
+	if ok {
+		loggedIn = val.(*LogInSessionCookie).LoggedIn
+	}
+	if loggedIn {
+		return val.(*LogInSessionCookie).ProfileType, loggedIn
+	}
+	return "", loggedIn
+}
+
 // Helper func to handle errors
 func handle(err error, fmtStr ...string) {
 	fmt := fmt.Sprintf("%v\n", err)

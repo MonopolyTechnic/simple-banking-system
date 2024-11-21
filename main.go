@@ -152,16 +152,9 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
-	// Check if already logged in
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if loggedIn {
-		if val.(*LogInSessionCookie).ProfileType == "employee" {
+		if profileType == "employee" {
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
 			http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
@@ -173,16 +166,9 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginEmployee(w http.ResponseWriter, r *http.Request) {
-	// Check if already logged in
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if loggedIn {
-		if val.(*LogInSessionCookie).ProfileType == "employee" {
+		if profileType == "employee" {
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
 			http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
@@ -330,16 +316,21 @@ func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
 }
 
 func userDashboard(w http.ResponseWriter, r *http.Request) {
-	attemptSession, err := store.Get(r, "login-attempt-session")
-	handle(err)
-	val, ok := attemptSession.Values["data"]
-	if !ok {
-		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-user", http.StatusSeeOther)
 		return
 	}
+	if profileType == "employee" {
+		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+		return
+	}
+
 	// Valid sign-in session
-	cookie := val.(*LogInAttemptCookie)
-	email := cookie.Email
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, _ := session.Values["logged-in"]
+	email := val.(*LogInSessionCookie).Email
 	var accounts []struct {
 		AccountNum  string
 		AccountType string
@@ -392,7 +383,6 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		return
 	}
-	log.Printf("accounts: %+v", accounts)
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
@@ -468,22 +458,6 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirect_uri, http.StatusSeeOther)
 }
 
-// SetLoggedIn is a helper function to set the login cookies
-func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAttemptCookie) {
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
-	session.Values["logged-in"] = &LogInSessionCookie{
-		LoggedIn:     true,
-		Email:        attemptCookie.Email,
-		ProfileType:  attemptCookie.ProfileType,
-		PhoneNumber:  attemptCookie.PhoneNumber,
-		PhoneCarrier: attemptCookie.PhoneCarrier,
-	}
-	err = session.Save(r, w)
-	handle(err)
-}
-
 func twofa(w http.ResponseWriter, r *http.Request) {
 	// Get the session
 	twofaSession, err := store.Get(r, "twofa-session")
@@ -510,7 +484,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			//log.Println(actualCode)
+			// log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -572,19 +546,12 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	// Redirect to login if not logged in yet
-
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
 		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
 		return
 	}
-	if val.(*LogInSessionCookie).ProfileType == "employee" {
+	if profileType == "employee" {
 		// TODO: Pass in the correct name that is stored in cookies
 		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
 	} else {
@@ -593,6 +560,16 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
+		return
+	}
+	if profileType != "employee" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		// Parse form data
 		err := r.ParseForm()
@@ -689,8 +666,17 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func openAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
+		return
+	}
+	if profileType != "employee" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
 
+	if r.Method == http.MethodPost {
 		// Parse form data
 		err := r.ParseForm()
 		if err != nil {
@@ -857,19 +843,13 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func listAccounts(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
 
-	if val.(*LogInSessionCookie).ProfileType != "employee" {
+	if profileType != "employee" {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
@@ -877,7 +857,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 	customerEmail := r.URL.Query().Get("email")
 	var customerID int
 	var accountData []models.Account
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
 		err := conn.QueryRow(
 			context.Background(),
 			`SELECT id FROM profiles WHERE email = $1 AND profile_type = 'customer'`,
@@ -946,6 +926,16 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func makeTransaction(w http.ResponseWriter, r *http.Request) {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
+		return
+	}
+	if profileType != "employee" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		// Parse form data
 		err := r.ParseForm()
@@ -1050,26 +1040,20 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 }
 
 func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
-	if val.(*LogInSessionCookie).ProfileType != "employee" {
+	if profileType != "employee" {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
 	customerEmail := r.URL.Query().Get("email") + "%" //% is used to search for emails that start with the given email
 	var potential_emails []string
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
 		query := `SELECT email FROM profiles WHERE email LIKE $1 AND profile_type = 'customer' ORDER BY email LIMIT 20`
-		rows, _ := conn.Query(context.Background(), query, customerEmail)
+		rows, err := conn.Query(context.Background(), query, customerEmail)
 		if err != nil {
 			return err
 		}
