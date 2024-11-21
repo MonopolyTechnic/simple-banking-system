@@ -388,7 +388,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		AddFlash(r, w, err.Error())
+		AddFlash(r, w, "e"+err.Error())
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		return
 	}
@@ -957,14 +957,14 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Extract the data from the form
 		transactionType := r.FormValue("transaction_type")
 		if transactionType != "deposit" && transactionType != "withdraw" {
-			AddFlash(r, w, "Invalid transaction type.")
+			AddFlash(r, w, "eInvalid transaction type.")
 			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
 			return
 		}
 		source := r.FormValue("source")
 		recipient := r.FormValue("recipient")
 		if recipient == "" {
-			AddFlash(r, w, "Recipient is a required field.")
+			AddFlash(r, w, "eRecipient is a required field.")
 			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
 			return
 		}
@@ -1032,13 +1032,13 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})
 		if err != nil {
-			AddFlash(r, w, err.Error())
+			AddFlash(r, w, "e"+err.Error())
 			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
 			return
 		}
 
 		// Flash message after successful insertion
-		AddFlash(r, w, fmt.Sprintf("%s of $%.2f completed successfully!", strings.Title(transactionType), amount))
+		AddFlash(r, w, fmt.Sprintf("s%s of $%.2f completed successfully!", strings.Title(transactionType), amount))
 
 		// Respond with a success message
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
