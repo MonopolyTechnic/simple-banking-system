@@ -14,11 +14,14 @@
         <p>Enter your information and we will help you recover your password.</p>
     </div>
     <form action="/verify-email-to-recover" method="POST">
-        <label for="name">Name</label>
-        <input type="text" id="name" name="name" required>
+        <label for="name">First Name</label>
+        <input type="text" id="fname" name="fname" required>
+
+        <label for="name">Last Name</label>
+        <input type="text" id="lname" name="lname" required>
         
         <label for="phone">Phone Number</label>
-        <input type="tel" id="phone" name="phone" required>
+        <input type="text" id="phone" name="phone" required>
 
         <div class="smallerbuttoncenter">
             <input type="submit" value="Verify">

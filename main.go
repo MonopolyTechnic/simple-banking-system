@@ -116,7 +116,7 @@ func main() {
 	http.HandleFunc("/employee-dashboard", employeeDashboard)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/forgot-email", forgotEmail)
-	http.HandleFunc("/verify-email-to-recover", verifyEmailtoRecover)
+	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
 	http.HandleFunc("/post-recovered-email", postrecoveredemail)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
@@ -527,11 +527,11 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func forgotEmail(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "forgotemail.html")
+	RenderTemplate(w, "forgotemail.html", nil)
 }
 
-func verifyEmailtoRecover(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "verifyemailtorecover.html")
+func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "verifyemailtorecover.html", nil)
 }
 
 func postrecoveredemail(w http.ResponseWriter, r *http.Request) {
