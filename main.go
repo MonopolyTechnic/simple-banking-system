@@ -1047,6 +1047,8 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 	// Quality of life improvement would be to somehow persist the form data for a retry
 	// Render the make transaction form (in case of GET request or on error)
 	RenderTemplate(w, "depositwithdraw.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+}
+
 func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "current-session")
 	handle(err)
