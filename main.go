@@ -107,6 +107,7 @@ func main() {
 
 	// Serve static content
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	http.Handle("/scripts/", http.StripPrefix("/scripts/", http.FileServer(http.Dir("./scripts"))))
 
 	// Routes
 	http.HandleFunc("/", index)
@@ -122,6 +123,10 @@ func main() {
 	http.HandleFunc("/open-account", openAccount)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/list-accounts", listAccounts)
+	http.HandleFunc("/list-potential-emails", listPotentialEmails)
+
+	pongo2.RegisterFilter("getFlashType", getFlashType)
+	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
 	http.HandleFunc("/user-dashboard", userDashboard)
 
 	pongo2.RegisterFilter("capitalize", capitalizeFilter)
@@ -258,7 +263,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		var ok bool
 		email, ok = isValidToken(w, r, token)
 		if !ok {
-			AddFlash(r, w, "Reset link has expired or is invalid.")
+			AddFlash(r, w, "eReset link has expired or is invalid.")
 			http.Redirect(w, r, "/reset-password?token="+token, http.StatusSeeOther)
 			return
 		}
@@ -266,7 +271,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		// Check if new password and confirm password match
 		if newPassword != confirmPassword {
 			// If passwords do not match, show an error message
-			AddFlash(r, w, "Passwords do not match.")
+			AddFlash(r, w, "ePasswords do not match.")
 			http.Redirect(w, r, "/reset-password?token="+token, http.StatusSeeOther)
 			return
 		}
@@ -433,7 +438,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 
 	// Invalid credentials
 	if err != nil {
-		AddFlash(r, w, "Invalid email or password entered.")
+		AddFlash(r, w, "eInvalid email or password entered.")
 
 		if r.URL.Query().Get("profile_type") == "employee" {
 			http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
@@ -530,11 +535,11 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			if ok {
-				AddFlash(r, w, "Invalid code.")
+				AddFlash(r, w, "eInvalid code.")
 				http.Redirect(w, r, "/twofa?retry=true", http.StatusSeeOther)
 			} else {
 				// code not found: code expired
-				AddFlash(r, w, "Code has expired. We will send another code to your phone.")
+				AddFlash(r, w, "eCode has expired. We will send another code to your phone.")
 				http.Redirect(w, r, "/twofa", http.StatusSeeOther)
 			}
 		}
@@ -563,6 +568,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	// Redirect to login if not logged in yet
+	
 	session, err := store.Get(r, "current-session")
 	handle(err)
 	val, ok := session.Values["logged-in"]
@@ -574,7 +580,6 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
 		return
 	}
-
 	if val.(*LogInSessionCookie).ProfileType == "employee" {
 		// TODO: Pass in the correct name that is stored in cookies
 		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
@@ -600,7 +605,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		phoneNum = stripNonAlphanumeric(phoneNum)
 		carrier := r.FormValue("carrier")
 		if _, exists := smsGateways[carrier]; !exists {
-			AddFlash(r, w, "Carrier not in list of provided carriers.")
+			AddFlash(r, w, "eCarrier not in list of provided carriers.")
 
 			http.Redirect(w, r, "/add-user", http.StatusSeeOther)
 			return
@@ -662,13 +667,13 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})
 		if err != nil {
-			AddFlash(r, w, err.Error())
+			AddFlash(r, w, "e" + err.Error())
 			http.Redirect(w, r, "/add-user", http.StatusSeeOther)
 			return
 		}
 
 		// Flash message after successful insertion
-		AddFlash(r, w, "User added successfully!")
+		AddFlash(r, w, "sUser added successfully!")
 
 		// Respond with a success message
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
@@ -695,7 +700,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("secondary_customer_email") != "" {
 			secondaryCustomerEmail = r.FormValue("secondary_customer_email")
 			if primaryCustomerEmail == secondaryCustomerEmail {
-				AddFlash(r, w, "Primary and secondary email cannot be identical.")
+				AddFlash(r, w, "ePrimary and secondary email cannot be identical.")
 				http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 				return
 			}
@@ -742,7 +747,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		})
 
 		if err != nil {
-			AddFlash(r, w, err.Error())
+			AddFlash(r, w, "e" + err.Error())
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
@@ -751,7 +756,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		// Extract account type
 		accountType := r.FormValue("account_type")
 		if accountType != "checking" && accountType != "savings" {
-			AddFlash(r, w, "Invalid account type.")
+			AddFlash(r, w, "eInvalid account type.")
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
@@ -759,7 +764,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		// Extract initial balance
 		balance, err := strconv.ParseFloat(r.FormValue("balance"), 64)
 		if err != nil || balance < 0 {
-			AddFlash(r, w, "Invalid initial deposit amount.")
+			AddFlash(r, w, "eInvalid initial deposit amount.")
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
@@ -833,12 +838,12 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		if err != nil {
-			AddFlash(r, w, err.Error())
+			AddFlash(r, w, "e" + err.Error())
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
 		// Flash message after successful insertion
-		AddFlash(r, w, "Account added successfully!")
+		AddFlash(r, w, "sAccount added successfully!")
 
 		// Respond with a success message
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
@@ -895,7 +900,9 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		handle(err, "Query failed")
+		AddFlash(r, w, "eNo matching email.")
+		http.Error(w, "No matching email", http.StatusNotFound)
+		return
 	}
 
 	type JSONAccount struct {
@@ -932,4 +939,50 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(jsonBytes)
+}
+
+func listPotentialEmails(w http.ResponseWriter, r *http.Request){
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	loggedIn := false
+	if ok {
+		loggedIn = val.(*LogInSessionCookie).LoggedIn
+	}
+	if !loggedIn {
+		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
+		return
+	}
+	if val.(*LogInSessionCookie).ProfileType != "employee" {
+		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
+		return
+	}	
+	customerEmail := r.URL.Query().Get("email") + "%"; //% is used to search for emails that start with the given email
+	var potential_emails []string
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		query := `SELECT email FROM profiles WHERE email LIKE $1 AND profile_type = 'customer' ORDER BY email LIMIT 20`  
+		rows , _ := conn.Query(context.Background() , query , customerEmail)
+		if(err != nil){
+			return err
+		}
+		defer rows.Close()
+		for rows.Next(){
+			var potential_email string
+			if err := rows.Scan(&potential_email); err != nil {
+				http.Error(w, "Server error", http.StatusInternalServerError)
+           		return fmt.Errorf("could not scan row: %v", err)
+			}
+			potential_emails = append(potential_emails , potential_email)
+		}
+		return nil		
+	})
+	if(err != nil){
+		handle(err); //I think this is fine, not sure what errors could cause this
+	}
+    potential_emails_JSON, err := json.Marshal(potential_emails)
+	if err != nil {
+		handle(err, "Failed to generate JSON")
+	}
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(potential_emails_JSON)
 }

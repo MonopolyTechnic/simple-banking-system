@@ -13,7 +13,10 @@
     <!-- Flash Messages -->
     <div class="flash-messages">
         {% for flash in flashes %}
-            <p class="flash flash-success">{{flash}}</p>
+            {% set flashClass = flash | getFlashType %}
+            {% if flashClass == 'success' %}
+                <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+            {% endif %}
         {% endfor %}
     </div>
 
@@ -60,11 +63,22 @@
         </section>
 
         <section class="search-section">
-            <div class="search-box">
-                <form onsubmit="submitSearchForm(this); return false" method="GET" class="search-form">
-                    <label for="email" class="search-label">Search for account by email</label>
-                    <input type="email" id="email" name="email" class="input-field" required>
-                </form>
+            <div class = "search-with-dropdown">
+                <div class="search-box">
+                    <form onsubmit="submitSearchForm(this); return false" method="GET" class="search-form" id = "search-form1">
+                        <label for="email" class="search-label">Search for account by email</label>
+                        <input type="email" id="email" name="email" class="input-field" required>
+                    </form>
+                </div>
+                <ul id="emailSearchList" style="display: none;" class = "search-results-preview"></ul>
+            </div>
+            <div class="flash-messages" , id = "error-flash-messages">
+                {% for flash in flashes %}
+                    {% set flashClass = flash | getFlashType %}
+                    {% if flashClass == 'error' %}
+                        <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+                    {% endif %}
+                {% endfor %}
             </div>
             <div class="search-results">
                 <table>
@@ -82,12 +96,15 @@
         </section>
     </main>
     <script>
+        
+    
         async function submitSearchForm(form) {
             const email = new FormData(form, null).get('email');
             console.log("email is ", email);
-            const data = await fetch(`/list-accounts?email=${email}`).then(res => res.json()).catch(console.error);
+            const data = await fetch(`/list-accounts?email=${email}`).then(res => res.status === 200 ? res.json() : null).catch(console.error);
             if (data) {
-                const tbody = form.parentElement.parentElement.querySelector(".search-results > table tbody");
+                document.getElementById('error-flash-messages').innerHTML = '';
+                const tbody = form.parentElement.parentElement.parentElement.querySelector(".search-results > table tbody");
                 tbody.innerHTML = '';
                 for (const item of data) {
                     const row = tbody.insertRow(-1);
@@ -98,7 +115,13 @@
                     row.insertCell(4).innerText = item.balance.toFixed(2);
                 }
             }
+            else{
+                console.log("in else statement")
+                window.location.replace("/employee-dashboard")
+            }
+            form.querySelector('input[name="email"]').value = '';
         }
     </script>
+    <script src = /scripts/account_search.js></script>
 </body>
 </html>
