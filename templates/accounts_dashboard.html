@@ -2,9 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Bank Account Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/userdashboard.css">
+    <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
     <!-- Flash Messages -->
@@ -13,7 +16,32 @@
             <p class="flash flash-success">{{flash}}</p>
         {% endfor %}
     </div>
-    <h1>Welcome, {{fname}}</h1>
+
+    <!-- Header Section -->
+    <header>
+        <div class="top-header">
+            <div class="header-left">
+                <a href="#home" class="icon-link">
+                    <span class="material-icons icon-large">home</span>
+                </a>
+            </div>
+            <div class="header-middle">
+                <h2 class="brand-name">Bank Name</h2>
+            </div>
+            <div class="header-right">
+                <nav>
+                    <ul class="header-nav">
+                        <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
+                        <li><a href="#settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
+                        <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        <div class="header-bottom">
+            <h1 class="welcome-message">Hello, {{ fname }}!</h1>
+        </div>
+    </header>
 
     <!-- Navigation Bar -->
     <div class="nav-bar">
