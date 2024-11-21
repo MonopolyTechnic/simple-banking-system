@@ -127,6 +127,10 @@ func main() {
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
+	http.HandleFunc("/user-dashboard", userDashboard)
+
+	pongo2.RegisterFilter("capitalize", capitalizeFilter)
+	pongo2.RegisterFilter("formatBalance", formatBalance)
 
 	log.Printf("Running on http://%s:%s (Press CTRL+C to quit)", host, port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
@@ -156,8 +160,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		if val.(*LogInSessionCookie).ProfileType == "employee" {
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
-			// TODO: redirect to accounts page instead (once it gets created)
-			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+			http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		}
 		return
 	}
@@ -178,8 +181,7 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 		if val.(*LogInSessionCookie).ProfileType == "employee" {
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
-			// TODO: redirect to accounts page instead (once it gets created)
-			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+			http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		}
 		return
 	}
@@ -323,6 +325,85 @@ func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "postresetpassword.html")
 }
 
+func userDashboard(w http.ResponseWriter, r *http.Request) {
+	attemptSession, err := store.Get(r, "login-attempt-session")
+	handle(err)
+	val, ok := attemptSession.Values["data"]
+	if !ok {
+		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+		return
+	}
+	// Valid sign-in session
+	cookie := val.(*LogInAttemptCookie)
+	email := cookie.Email
+	var accounts []struct {
+		AccountNum  string
+		AccountType string
+		Balance     float64
+	}
+	var name string
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		// Query to get the customer ID for the primary customer email
+		var id int
+		err := conn.QueryRow(
+			context.Background(),
+			`SELECT first_name, id FROM profiles WHERE email = $1`,
+			email,
+		).Scan(&name, &id)
+
+		if err != nil {
+			return fmt.Errorf("Invalid email: %s", email)
+		}
+		rows, err := conn.Query(
+			context.Background(),
+			`SELECT account_num, account_type, balance FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1`,
+			id, // Use the customer ID obtained earlier
+		)
+
+		if err != nil {
+			return fmt.Errorf("Invalid return from accounts: %s", email)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var account struct {
+				AccountNum  string
+				AccountType string
+				Balance     float64
+			}
+			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance); err != nil {
+				return fmt.Errorf("Error scanning account row: %v", err)
+			}
+			account.Balance = math.Round(account.Balance*100) / 100
+			// Append each account to the slice
+			accounts = append(accounts, account)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("Error while iterating over account rows: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		AddFlash(r, w, err.Error())
+		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
+		return
+	}
+	log.Printf("accounts: %+v", accounts)
+	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+}
+
+func capitalizeFilter(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	// Ensure the value is a string
+	if str, ok := value.Interface().(string); ok {
+		// Capitalize the first letter and return the value
+		if len(str) > 0 {
+			return pongo2.AsValue(strings.ToUpper(string(str[0])) + str[1:]), nil
+		}
+	}
+	// If it's not a string, return it as is
+	return pongo2.AsValue(value.Interface()), nil
+}
+
 // Callback endpoint for login requests
 func callback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -450,8 +531,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 			if cookie.ProfileType == "employee" {
 				http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 			} else {
-				// TODO: redirect to accounts page instead (once it gets created)
-				http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+				http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 			}
 		} else {
 			if ok {
@@ -504,9 +584,7 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 		// TODO: Pass in the correct name that is stored in cookies
 		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
 	} else {
-		// TODO: redirect to user accounts page instead
-		// http.Redirect(w, r, "/accounts", http.StatusSeeOther)
-		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
+		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 	}
 }
 
@@ -690,41 +768,75 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
 			return
 		}
+		//if secondaryID is 0 , then it is not joint account and we do an insert
+		//query without secondaryID
+		if secondaryCustomerID == 0{
+			// Insert the new not joint account into the 'accounts' table
+			err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+				// Prepare SQL insert statement
+				query := `
+					INSERT INTO accounts (
+						account_num,
+						primary_customer_id,
+						account_type,
+						balance
+					) VALUES (
+						$1, $2, $3, $4
+					)`
+				log.Println("secondaryCustomerID is" , secondaryCustomerID)
+				// Execute the query
+				_, err := conn.Exec(
+					context.Background(),
+					query,
+					accountNum,          // Account number
+					primaryCustomerID,   // Primary customer ID
+					accountType,         // Account type (checking/savings)
+					balance,             // Initial balance
+				)
 
-		// Insert the new account into the 'accounts' table
-		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-			// Prepare SQL insert statement
-			query := `
-				INSERT INTO accounts (
-					account_num,
-					primary_customer_id,
-					secondary_customer_id,
-					account_type,
-					balance
-				) VALUES (
-					$1, $2, $3, $4, $5
-				)`
+				// Check for errors during the insert
+				if err != nil {
+					return fmt.Errorf("Failed to insert user into database: %v", err)
+				}
 
-			// Execute the query
-			_, err := conn.Exec(
-				context.Background(),
-				query,
-				accountNum,          // Account number
-				primaryCustomerID,   // Primary customer ID
-				secondaryCustomerID, // Secondary customer ID (can be NULL)
-				accountType,         // Account type (checking/savings)
-				balance,             // Initial balance
-			)
+				// Success, return nil to indicate the insert was successful
+				return nil
+			})
+		} else{
+			// Insert the new joint account with secondaryID into the 'accounts' table
+			err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+				// Prepare SQL insert statement
+				query := `
+					INSERT INTO accounts (
+						account_num,
+						primary_customer_id,
+						secondary_customer_id,
+						account_type,
+						balance
+					) VALUES (
+						$1, $2, $3, $4, $5
+					)`
+				log.Println("secondaryCustomerID is" , secondaryCustomerID)
+				// Execute the query
+				_, err := conn.Exec(
+					context.Background(),
+					query,
+					accountNum,          // Account number
+					primaryCustomerID,   // Primary customer ID
+					secondaryCustomerID, // Secondary customer ID (can be NULL)
+					accountType,         // Account type (checking/savings)
+					balance,             // Initial balance
+				)
 
-			// Check for errors during the insert
-			if err != nil {
-				return fmt.Errorf("Failed to insert user into database: %v", err)
-			}
+				// Check for errors during the insert
+				if err != nil {
+					return fmt.Errorf("Failed to insert user into database: %v", err)
+				}
 
-			// Success, return nil to indicate the insert was successful
-			return nil
-		})
-
+				// Success, return nil to indicate the insert was successful
+				return nil
+			})
+		}
 		if err != nil {
 			AddFlash(r, w, "e" + err.Error())
 			http.Redirect(w, r, "/open-account", http.StatusSeeOther)
