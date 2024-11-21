@@ -839,39 +839,42 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
 			return
 		}
-		accountNum := r.FormValue("account_number")
+		recipient := r.FormValue("recipient")
 		// Extract transaction amount
 		amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
 
 		// Create the transaction and update the account balance
-		// TODO: figure out how to execute a postgres transaction so both queries must run to be committed
+		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			_, err := conn.Exec(
 				context.Background(),
-				`--BEGIN;
+				fmt.Sprintf(
+					`BEGIN;
+						INSERT INTO transactions(
+							source_account, recipient_account, amount, transaction_type, transaction_timestamp
+						) VALUES (
+							NULL, '%[1]s', %[2]f::numeric, '%[3]s', NOW()
+						);
 
-				-- INSERT INTO transactions(
-				--	type, account_num, amount
-				-- ) VALUES (
-				--	$1, $2, $3
-				--);
+						-- source -> recipient
 
-				UPDATE accounts SET balance=(
-					SELECT balance + (
-						CASE
-							WHEN $1='deposit' THEN $3::numeric
-							WHEN $1='withdraw' THEN -1 * $3::numeric
-							ELSE $3::numeric
-						END
-					)
-					FROM accounts WHERE account_num=$2
-				)
-				WHERE account_num=$2;
-
-				--COMMIT;`,
-				transactionType,
-				accountNum,
-				amount,
+						UPDATE accounts SET balance=(
+							SELECT balance + (
+								CASE
+									WHEN '%[3]s'='deposit' THEN %[2]f::numeric
+									WHEN '%[3]s'='withdraw' THEN -1 * %[2]f::numeric
+									ELSE %[2]f::numeric
+								END
+							)
+							FROM accounts WHERE account_num='%[1]s'
+						)
+						WHERE account_num='%[1]s';
+					END;
+					`,
+					recipient,
+					amount,
+					transactionType,
+				),
 			)
 
 			// Check for error and return if any
