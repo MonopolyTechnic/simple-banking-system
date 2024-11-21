@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"database/sql"
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
 	"github.com/gorilla/sessions"
@@ -400,9 +400,9 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 	cookie := val.(*LogInAttemptCookie)
 	email := cookie.Email
     var accounts []struct {
-        number   string
-        outgoing []transaction
-        incoming []transaction
+        Number   string `json:"Number"`
+        Outgoing []transaction `json:"Outgoing"`
+        Incoming []transaction `json:"Incoming"`
     }
 	var name string
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
@@ -470,17 +470,17 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 					}
 				} else {
 					var pcid int
-					var scid int
+					var scidnull sql.NullInt32
 					err := conn.QueryRow(
 						context.Background(),
 						`SELECT primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
 						tmp.AccNum, // Use the customer ID obtained earlier
-					).Scan(&pcid, &scid)
+					).Scan(&pcid, &scidnull)
 					if err != nil {
-						return fmt.Errorf("Account Number cannot be displayed.")
+						return fmt.Errorf("Account Number cannot be displayed. %v", err)
 					}
 					var fn string
-					var mn string
+					var mn sql.NullString
 					var ln string
 					err = conn.QueryRow(
 						context.Background(),
@@ -488,10 +488,15 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 						pcid, // Use the customer ID obtained earlier
 					).Scan(&fn, &mn, &ln)
 					if err != nil {
-						return fmt.Errorf("Name of account %s cannot be displayed.", pcid)
+						return fmt.Errorf("Name of account %s cannot be displayed 2. %v", pcid, err)
 					}
-					othername = fn + " " + mn + " " + ln
-					if (scid != 0) {
+					if (!mn.Valid){
+						othername = fn + " " + ln
+					} else {
+						othername = fn + " " + mn.String + " " + ln
+					}
+					if scidnull.Valid {
+						scid := scidnull.Int32
 						othername = othername + ", "
 						err := conn.QueryRow(
 							context.Background(),
@@ -501,7 +506,11 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 						if err != nil {
 							return fmt.Errorf("Name of account %s cannot be displayed.", pcid)
 						}
-						othername = othername + fn + " " + mn + " " + ln
+						if (!mn.Valid){
+							othername += fn + " " + ln
+						} else {
+							othername += fn + " " + mn.String + " " + ln
+						}
 					}
 				} 
 				var tran  = transaction{
@@ -510,20 +519,20 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 					Amount: tmp.Amount,
 					Date: tmp.Date,
 				}
-				if (tran.Type == "withdraw") {
+				if (sc == accnum) {
 					outgoing = append(outgoing, tran)
 				} else {
 					incoming = append(incoming, tran)
 				}
 			}
 			var acc struct{
-				number   string
-				outgoing []transaction
-				incoming []transaction
+				Number   string `json:"Number"`
+				Outgoing []transaction `json:"Outgoing"`
+				Incoming []transaction `json:"Incoming"`
 			}
-			acc.number = accnum
-			acc.outgoing = outgoing
-			acc.incoming = incoming
+			acc.Number = accnum
+			acc.Outgoing = outgoing
+			acc.Incoming = incoming
 			accounts = append(accounts, acc)
 		}
 		if err := accrows.Err(); err != nil {
@@ -536,8 +545,15 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		return
 	}
-	log.Printf("accounts: %+v", accounts)
-	RenderTemplate(w, "transaction_history.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+	//log.Printf("accounts: %+v", accounts)
+	acclistJSON, err := json.Marshal(accounts)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+	acclistJSONString := string(acclistJSON)
+	//log.Printf("accountsJSONString: %s", acclistJSONString)
+	RenderTemplate(w, "transaction_history.html", pongo2.Context{"acclistJSON": acclistJSONString, "acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
 func capitalizeFilter(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
