@@ -17,4 +17,5 @@ type Profile struct {
 	PhoneNumber    pgtype.Text  `db:"phone_number"`
 	PhoneCarrier   pgtype.Text  `db:"phone_carrier"`
 	PasswordHash   pgtype.Bytea `db:"password_hash"`
+	PasswordMask   pgtype.Text  `db:"masked_password"`
 }

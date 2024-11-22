@@ -729,6 +729,10 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		password := r.FormValue("pw")
+		maskedPassword := ""
+		if len(password) > 0 {
+			maskedPassword = string(password[0]) + strings.Repeat("*", len(password)-1)
+		}
 		// Date of Birth
 		dob := r.FormValue("dob")
 		// Billing Address
@@ -754,7 +758,8 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 					billing_address,
 					phone_number,
 					phone_carrier,
-					password_hash
+					password_hash,
+					masked_password
 				) VALUES (
 					'customer', 
 					$1,
@@ -764,7 +769,8 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 					$5, 
 					$6, 
 					$7, 
-					$8
+					$8,
+					$9
 				);`,
 				firstName,
 				lastName,
@@ -774,6 +780,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 				phoneNum,
 				carrier,
 				passwordHash,
+				maskedPassword,
 			)
 
 			// Check for error and return if any

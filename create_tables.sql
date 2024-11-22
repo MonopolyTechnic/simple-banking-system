@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS profiles(
                         NOT NULL
     ,password_hash      BYTEA
                         NOT NULL
+    ,masked_password    VARCHAR(32)
+                        NOT NULL
 );
 CREATE TABLE IF NOT EXISTS accounts(
     account_num             CHAR(16)
