@@ -8,6 +8,9 @@
 </head>
 <body>
 
+    {% for flash in flashes %}
+        <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+    {% endfor %}
     <!-- Header for Transaction History -->
     <h1>Transaction History</h1>
 
