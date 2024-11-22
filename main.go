@@ -128,12 +128,12 @@ func main() {
 	http.HandleFunc("/forgot-email", forgotEmail)
 	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
 	http.HandleFunc("/post-recovered-email", postRecoveredEmail)
+	http.HandleFunc("/user-dashboard", userDashboard)
+	http.HandleFunc("/transaction-history", transactionHistory)
+	http.HandleFunc("/transfer", transfer)
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
-	http.HandleFunc("/user-dashboard", userDashboard)
-	http.HandleFunc("/transaction-history", transactionHistory)
-
 	pongo2.RegisterFilter("capitalize", capitalizeFilter)
 	pongo2.RegisterFilter("formatBalance", formatBalance)
 
@@ -393,8 +393,137 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		return
 	}
-	log.Printf("accounts: %+v", accounts)
+	//log.Printf("accounts: %+v", accounts)
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+}
+
+func transfer(w http.ResponseWriter, r *http.Request){
+	attemptSession, err := store.Get(r, "login-attempt-session")
+	handle(err)
+	val, ok := attemptSession.Values["data"]
+	if !ok {
+		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+		return
+	}
+	var accounts []struct {
+		Number string `json:"Number"`
+		Balance float64 `json:"Balance"`
+	}
+	cookie := val.(*LogInAttemptCookie)
+	email := cookie.Email
+	var name string
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		// Query to get the customer ID for the primary customer email
+		var id int
+		err := conn.QueryRow(
+			context.Background(),
+			`SELECT first_name, id FROM profiles WHERE email = $1`,
+			email,
+		).Scan(&name, &id)
+
+		if err != nil {
+			return fmt.Errorf("Invalid email: %s", email)
+		}
+		rows, err := conn.Query(
+			context.Background(),
+			`SELECT account_num, balance FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1`,
+			id, // Use the customer ID obtained earlier
+		)
+
+		if err != nil {
+			return fmt.Errorf("Invalid return from accounts: %s", email)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var account struct {
+				Number string `json:"Number"`
+				Balance float64 `json:"Balance"`
+			}
+			if err := rows.Scan(&account.Number, &account.Balance); err != nil {
+				return fmt.Errorf("Error scanning account row: %v", err)
+			}
+			accounts = append(accounts, account)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("Error while iterating over account rows: %v", err)
+		}
+		return nil
+	})
+	if (r.Method == http.MethodPost){
+
+		sourceAccount := r.FormValue("sourceAccount")
+        destinationAccount := r.FormValue("destinationAccount")
+        amountStr := r.FormValue("amount")
+        amount, err := strconv.ParseFloat(amountStr, 64)
+        if err != nil {
+            AddFlash(r, w, err.Error())
+			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
+        }
+		index := -1
+		for i := 0; i < len(accounts); i++ {
+			if accounts[i].Number == sourceAccount{
+				index = i
+			}
+		}
+		if index == -1 {
+            AddFlash(r, w, "This shouldn't even be possible. How??")
+			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
+		}
+		currb := accounts[index].Balance
+		if (currb < amount){
+            AddFlash(r, w, "Balance too low to transfer this amount.")
+			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
+		}
+		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			// Query to get the customer ID for the primary customer email
+			var dbal float64
+			var tmp float64
+			err := conn.QueryRow(
+				context.Background(),
+				`SELECT balance FROM accounts WHERE account_num = $1`,
+				destinationAccount,
+			).Scan(&dbal)
+			if err != nil {
+				return fmt.Errorf("Destination Account does not exist.")
+			}
+			err = conn.QueryRow(
+				context.Background(),
+				`UPDATE accounts SET balance = $1 WHERE account_num = $2 RETURNING balance`,
+				currb-amount, sourceAccount,
+			).Scan(&tmp)
+			if err != nil {
+				return fmt.Errorf("Bad Update: %v", err)
+			}
+			err = conn.QueryRow(
+				context.Background(),
+				`UPDATE accounts SET balance = $1 WHERE account_num = $2 RETURNING balance`,
+				dbal+amount, destinationAccount,
+			).Scan(&tmp)
+			if err != nil {
+				return fmt.Errorf("Bad Update: %v", err)
+			}
+			err = conn.QueryRow(
+				context.Background(),
+				`INSERT INTO transactions(
+					source_account,
+					recipient_account,
+					amount,
+					transaction_type,
+					transaction_timestamp
+				) VALUES (
+					$1, $2, $3, $4, CURRENT_TIMESTAMP
+				) RETURNING transaction_id`,
+				sourceAccount, destinationAccount, amount, "deposit", 
+			).Scan(&tmp)
+			if err != nil {
+				return fmt.Errorf("Bad Insert into Transactions: %v", err)
+			}
+			return nil
+		})
+		http.Redirect(w, r, "/transfer", http.StatusSeeOther)
+	}
+	RenderTemplate(w, "transfer.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
 func transactionHistory(w http.ResponseWriter, r *http.Request) {
