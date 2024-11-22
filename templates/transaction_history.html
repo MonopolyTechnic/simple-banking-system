@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction History</title>
+    <link rel="stylesheet" href="/static/userdashboard.css"> <!-- Assuming your CSS file is named styles.css -->
+</head>
+<body>
+
+    <!-- Header for Transaction History -->
+    <h1>Transaction History</h1>
+
+    <!-- Navigation Bar -->
+    <div class="nav-bar">
+        <a href="/user-dashboard">Dashboard</a>
+        <a href="#">Transfer</a>
+        <a href="#">Statements</a>
+        <a href="/transaction-history">Transactions</a>
+        <a href="#">Notifications</a>
+        <a href="#">Settings</a>
+    </div>
+    <!-- Account Dropdown and Transaction Display -->
+    <div class="accounts-container">
+        <!-- Dropdown to select account -->
+        <select id="accountDropdown" onchange="displayTransactions()">
+            <option value="">Select Account</option>
+            {% for account in acclist %}
+                <option value="{{ account.Number }}">{{ account.Number }}</option>
+            {% endfor %}
+        </select>
+
+        <div id="transactionsContainer" style="margin-top: 20px;">
+            <!-- Placeholder for selected account's transactions -->
+        </div>
+    </div>
+
+    <script>
+        // Function to display transactions for the selected account
+        var acclist = {{ acclistJSON | safe }}
+        console.log(acclist)
+        function displayTransactions() {
+            const accountNumber = document.getElementById('accountDropdown').value;
+            const transactionsContainer = document.getElementById('transactionsContainer');
+
+            // Clear previous transactions
+            transactionsContainer.innerHTML = '';
+            if (accountNumber) {
+                // Find the selected account from the list
+                const account = acclist.find(acc => acc.Number === accountNumber);
+
+                if (account) {
+                    // Create outgoing transactions section
+                    let outgoingHTML = '<h3>Outgoing Transactions</h3>';
+                    account.Outgoing.forEach(transaction => {
+                        outgoingHTML += `
+                            <div class="account-card">
+                                <p><strong>Name:</strong> ${transaction.Name}</p>
+                                <p><strong>Type:</strong> ${transaction.Type}</p>
+                                <p><strong>Amount:</strong> $${transaction.Amount.toFixed(2)}</p>
+                                <p><strong>Date:</strong> ${new Date(transaction.Date).toLocaleDateString()}</p>
+                            </div>
+                        `;
+                    });
+
+                    // Create incoming transactions section
+                    let incomingHTML = '<h3>Incoming Transactions</h3>';
+                    account.Incoming.forEach(transaction => {
+                        incomingHTML += `
+                            <div class="account-card">
+                                <p><strong>Name:</strong> ${transaction.Name}</p>
+                                <p><strong>Type:</strong> ${transaction.Type}</p>
+                                <p><strong>Amount:</strong> $${transaction.Amount.toFixed(2)}</p>
+                                <p><strong>Date:</strong> ${new Date(transaction.Date).toLocaleDateString()}</p>
+                            </div>
+                        `;
+                    });
+
+                    // Add outgoing and incoming transactions to the container
+                    transactionsContainer.innerHTML = `
+                        <div style="display: flex; justify-content: space-between;">
+                            <div style="width: 45%;">${outgoingHTML}</div>
+                            <div style="width: 45%;">${incomingHTML}</div>
+                        </div>
+                    `;
+                    console.log('Outgoing Transactions:', account.Outgoing);
+                    console.log('Incoming Transactions:', account.Incoming);
+
+                }
+            }
+        }
+    </script>
+
+</body>
+</html>

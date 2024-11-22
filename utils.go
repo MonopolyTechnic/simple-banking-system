@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -384,6 +385,24 @@ func checkLoggedIn(r *http.Request, w http.ResponseWriter) (string, bool) {
 		return val.(*LogInSessionCookie).ProfileType, loggedIn
 	}
 	return "", loggedIn
+}
+
+type transaction struct {
+	Name   string    `json:"Name"`
+	Type   string    `json:"Type"`
+	Amount float64   `json:"Amount"`
+	Date   time.Time `json:"Date"`
+}
+
+func (t *transaction) MarshalJSON() ([]byte, error) {
+	type Alias transaction // Create an alias to avoid recursion
+	return json.Marshal(&struct {
+		Date string `json:"Date"` // Format the Date field as a string
+		*Alias
+	}{
+		Date:  t.Date.Format(time.RFC3339), // ISO 8601 format
+		Alias: (*Alias)(t),
+	})
 }
 
 // Helper func to handle errors
