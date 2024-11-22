@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS accounts(
                             NOT NULL
                             CHECK (balance >= 0)
     ,frozen                 VARCHAR(1)
+                            NOT NULL
+                            DEFAULT 'F'
     ,FOREIGN KEY (primary_customer_id)
         REFERENCES profiles(id)
     ,FOREIGN KEY (secondary_customer_id)
