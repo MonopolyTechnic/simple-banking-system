@@ -392,7 +392,7 @@ func transfer(w http.ResponseWriter, r *http.Request){
 		).Scan(&name, &id)
 
 		if err != nil {
-			return fmt.Errorf("Invalid email: %s", email)
+			return fmt.Errorf("eInvalid email: %s", email)
 		}
 		rows, err := conn.Query(
 			context.Background(),
@@ -401,7 +401,7 @@ func transfer(w http.ResponseWriter, r *http.Request){
 		)
 
 		if err != nil {
-			return fmt.Errorf("Invalid return from accounts: %s", email)
+			return fmt.Errorf("eInvalid return from accounts: %s", email)
 		}
 		defer rows.Close()
 
@@ -411,12 +411,12 @@ func transfer(w http.ResponseWriter, r *http.Request){
 				Balance float64 `json:"Balance"`
 			}
 			if err := rows.Scan(&account.Number, &account.Balance); err != nil {
-				return fmt.Errorf("Error scanning account row: %v", err)
+				return fmt.Errorf("eError scanning account row: %v", err)
 			}
 			accounts = append(accounts, account)
 		}
 		if err := rows.Err(); err != nil {
-			return fmt.Errorf("Error while iterating over account rows: %v", err)
+			return fmt.Errorf("eError while iterating over account rows: %v", err)
 		}
 		return nil
 	})
@@ -458,7 +458,7 @@ func transfer(w http.ResponseWriter, r *http.Request){
 				destinationAccount,
 			).Scan(&dbal)
 			if err != nil {
-				return fmt.Errorf("Destination Account does not exist.")
+				return fmt.Errorf("eDestination Account does not exist.")
 			}
 			err = conn.QueryRow(
 				context.Background(),
@@ -466,7 +466,7 @@ func transfer(w http.ResponseWriter, r *http.Request){
 				currb-amount, sourceAccount,
 			).Scan(&tmp)
 			if err != nil {
-				return fmt.Errorf("Bad Update: %v", err)
+				return fmt.Errorf("eBad Update: %v", err)
 			}
 			err = conn.QueryRow(
 				context.Background(),
@@ -474,7 +474,7 @@ func transfer(w http.ResponseWriter, r *http.Request){
 				dbal+amount, destinationAccount,
 			).Scan(&tmp)
 			if err != nil {
-				return fmt.Errorf("Bad Update: %v", err)
+				return fmt.Errorf("eBad Update: %v", err)
 			}
 			err = conn.QueryRow(
 				context.Background(),

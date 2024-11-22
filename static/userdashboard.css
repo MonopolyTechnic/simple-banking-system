@@ -17,6 +17,22 @@ a:visited {
     color: purple; /* Change color for visited links */
 }
 
+.flash-messages {
+    text-align: center;
+}
+
+.flash-error {
+    color: #a8313b;
+}
+
+.flash-success {
+    color: #388f6c;
+}
+
+.flash-info {
+    color: #33618f;
+}
+
 body {
     display: flex;
     flex-direction: column;

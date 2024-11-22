@@ -10,7 +10,7 @@
     <!-- Flash Messages -->
     <div class="flash-messages">
         {% for flash in flashes %}
-            <p class="flash flash-success">{{flash}}</p>
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
         {% endfor %}
     </div>
     <h1>Welcome, {{fname}}</h1>
