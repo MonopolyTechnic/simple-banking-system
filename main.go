@@ -549,7 +549,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
 		rows, _ := conn.Query(
 			context.Background(),
-			"SELECT profile_type, password_hash, phone_number, phone_carrier FROM profiles WHERE email = $1 AND profile_type = $2",
+			"SELECT profile_type, password_hash, phone_number, phone_carrier, masked_password FROM profiles WHERE email = $1 AND profile_type = $2",
 			r.FormValue("email"),
 			r.URL.Query().Get("profile_type"),
 		)
@@ -582,10 +582,11 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	attemptSession, err := store.Get(r, "login-attempt-session")
 	handle(err)
 	attemptSession.Values["data"] = &LogInAttemptCookie{
-		Email:        r.FormValue("email"),
-		ProfileType:  res[0].ProfileType.String,
-		PhoneNumber:  res[0].PhoneNumber.String,
-		PhoneCarrier: res[0].PhoneCarrier.String,
+		Email:          r.FormValue("email"),
+		ProfileType:    res[0].ProfileType.String,
+		PhoneNumber:    res[0].PhoneNumber.String,
+		PhoneCarrier:   res[0].PhoneCarrier.String,
+		MaskedPassword: res[0].MaskedPassword.String,
 	}
 	attemptSession.Options.MaxAge = 30 * 60 // 30 minutes
 	err = attemptSession.Save(r, w)
@@ -1302,7 +1303,10 @@ func settings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract email and masked password directly
 	userEmail := val.(*LogInSessionCookie).Email
+	maskedPassword := val.(*LogInSessionCookie).MaskedPassword
+
 	var firstName, phoneNumber string
 
 	// Retrieve the first_name for the logged-in user using email
@@ -1320,5 +1324,5 @@ func settings(w http.ResponseWriter, r *http.Request) {
 
 	recentLogin := time.Now().Format("2006-01-02 15:04:05")
 
-	RenderTemplate(w, "settings.html", pongo2.Context{"fname": firstName, "recentLogin": recentLogin, "email": userEmail, "phoneNumber": phoneNumber})
+	RenderTemplate(w, "settings.html", pongo2.Context{"fname": firstName, "recentLogin": recentLogin, "email": userEmail, "phoneNumber": phoneNumber, "maskedPassword": maskedPassword})
 }

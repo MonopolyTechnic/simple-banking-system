@@ -27,5 +27,5 @@ INSERT INTO profiles(
     ,:'phonenum'
     ,:'carrier'
     ,crypt(:'pw', gen_salt('bf', 10))::BYTEA
-    ,LEFT(:pw, 1) || REPEAT('*', LENGTH(:pw) - 1)
+    ,CONCAT(SUBSTRING(:'pw' FROM 1 FOR 1), REPEAT('*', LENGTH(:'pw') - 1))
 );
