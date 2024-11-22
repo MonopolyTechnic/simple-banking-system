@@ -10,7 +10,7 @@
     <!-- Flash Messages -->
     <div class="flash-messages">
         {% for flash in flashes %}
-            <p class="flash flash-success">{{flash}}</p>
+            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
         {% endfor %}
     </div>
     <h1>Welcome, {{fname}}</h1>
@@ -18,7 +18,7 @@
     <!-- Navigation Bar -->
     <div class="nav-bar">
         <a href="/user-dashboard">Dashboard</a>
-        <a href="#">Transfer</a>
+        <a href="/transfer">Transfer</a>
         <a href="#">Statements</a>
         <a href="/transaction-history">Transactions</a>
         <a href="#">Notifications</a>
