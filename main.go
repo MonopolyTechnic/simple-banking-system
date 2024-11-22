@@ -988,7 +988,6 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func listAccounts(w http.ResponseWriter, r *http.Request) {
-	log.Println("List accounts")
 	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
