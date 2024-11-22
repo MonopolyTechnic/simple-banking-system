@@ -127,6 +127,7 @@ func main() {
 	http.HandleFunc("/forgot-email", forgotEmail)
 	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
 	http.HandleFunc("/post-recovered-email", postRecoveredEmail)
+	http.HandleFunc("/settings", settings)
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
@@ -1051,4 +1052,40 @@ func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
 
 func postRecoveredEmail(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "postrecoveredemail.html")
+}
+
+func settings(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data
+
+	session, err := store.Get(r, "current-session")
+	if err != nil {
+		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if the user is logged in
+	val, ok := session.Values["logged-in"]
+	if !ok || !val.(*LogInSessionCookie).LoggedIn {
+		http.Error(w, "Unauthorized access", http.StatusUnauthorized)
+		return
+	}
+
+	userEmail := val.(*LogInSessionCookie).Email
+	var firstName string
+
+	// Retrieve the first_name for the logged-in user using email
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		return conn.QueryRow(
+			context.Background(),
+			"SELECT first_name FROM profiles WHERE email = $1",
+			userEmail,
+		).Scan(&firstName)
+	})
+
+	if err != nil {
+		http.Error(w, "Error retrieving user information", http.StatusInternalServerError)
+		return
+	}
+
+	RenderTemplate(w, "settings.html", pongo2.Context{"fname": firstName})
 }

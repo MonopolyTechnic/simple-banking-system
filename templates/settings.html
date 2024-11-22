@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Monopoly-Technic</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style2.css">
+    <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <!-- Flash Messages -->
+    <div class="flash-messages">
+        {% for flash in flashes %}
+            {% set flashClass = flash | getFlashType %}
+            {% if flashClass == 'success' %}
+                <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Header Section -->
+    <header>
+        <div class="top-header">
+            <div class="header-left">
+                <a href="/employee-dashboard" class="icon-link">
+                    <span class="material-icons icon-large">home</span>
+                </a>
+            </div>
+            <div class="header-middle">
+                <h2 class="brand-name">Bank Name</h2>
+            </div>
+            <div class="header-right">
+                <nav>
+                    <ul class="header-nav">
+                        <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
+                        <li><a href="/settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
+                        <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        <div class="header-bottom">
+            <h1 class="welcome-message">Hello, {{ fname }}!</h1>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="content-container">
+        <!-- Header Section -->
+        <section class="user-section">
+            <div class="section-header">
+                <h1 class="section-title">Settings</h1>
+            </div>
+        </section>
+    
+        <!-- Settings Display -->
+
+    </main>
+</body>
+</html>

@@ -24,7 +24,7 @@
     <header>
         <div class="top-header">
             <div class="header-left">
-                <a href="#home" class="icon-link">
+                <a href="/employee-dashboard" class="icon-link">
                     <span class="material-icons icon-large">home</span>
                 </a>
             </div>
@@ -35,7 +35,7 @@
                 <nav>
                     <ul class="header-nav">
                         <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
-                        <li><a href="#settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
+                        <li><a href="/settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
                         <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
                     </ul>
                 </nav>
@@ -101,7 +101,6 @@
         async function submitSearchForm(form) {
             const email = new FormData(form, null).get('email');
             console.log("email is ", email);
-            const data = await fetch(`/list-accounts?email=${email}`).then(res => res.status === 200 ? res.json() : null).catch(console.error);
             if (data) {
                 document.getElementById('error-flash-messages').innerHTML = '';
                 const tbody = form.parentElement.parentElement.parentElement.querySelector(".search-results > table tbody");
