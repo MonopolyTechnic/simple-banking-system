@@ -128,6 +128,7 @@ func main() {
 	http.HandleFunc("/forgot-email", forgotEmail)
 	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
 	http.HandleFunc("/post-recovered-email", postRecoveredEmail)
+	http.HandleFunc("/freeze-account", freezeAccount)
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
@@ -306,7 +307,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		AccountNum  string
 		AccountType string
 		Balance     float64
-		Frozen      string
+		AccountStatus  string
 	}
 	var name string
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
@@ -338,16 +339,16 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 				AccountNum  string
 				AccountType string
 				Balance     float64
-				Frozen      string
+				AccountStatus string
 			}
 			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance, &frz); err != nil {
 				return fmt.Errorf("Error scanning account row: %v", err)
 			}
 			account.Balance = math.Round(account.Balance*100) / 100
-			if frz == 'T'{
-				account.Frozen = "FROZEN ACCOUNT"
+			if frz == "FROZEN"{
+				account.AccountStatus = "FROZEN ACCOUNT"
 			} else {
-				account.Frozen = ""
+				account.AccountStatus = ""
 			}
 			// Append each account to the slice
 			accounts = append(accounts, account)
@@ -703,6 +704,26 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func freezeAccount(w http.ResponseWriter, r *http.Request) {
+	attemptSession, err := store.Get(r, "login-attempt-session")
+	handle(err)
+	val, ok := attemptSession.Values["data"]
+	if !ok {
+		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+		return
+	}
+	if r.Method == http.MethodPost {
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "Unable to parse form data", http.StatusBadRequest)
+			return
+		}
+
+		// Extract the data from the form
+		account_num := r.FormValue("accnum")
+	}
+}
+
 func addUser(w http.ResponseWriter, r *http.Request) {
 	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
@@ -914,9 +935,9 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 						primary_customer_id,
 						account_type,
 						balance,
-						frozen
+						account_status
 					) VALUES (
-						$1, $2, $3, $4, 'F'
+						$1, $2, $3, $4, 'OPEN'
 					)`
 				log.Println("secondaryCustomerID is", secondaryCustomerID)
 				// Execute the query
@@ -948,9 +969,9 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 						secondary_customer_id,
 						account_type,
 						balance,
-						frozen
+						account_status
 					) VALUES (
-						$1, $2, $3, $4, $5, 'F'
+						$1, $2, $3, $4, $5, 'OPEN'
 					)`
 				log.Println("secondaryCustomerID is", secondaryCustomerID)
 				// Execute the query
@@ -1016,7 +1037,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 		rows, _ := conn.Query(
 			context.Background(),
-			"SELECT account_num, primary_customer_id, secondary_customer_id, account_type, balance, frozen FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1",
+			"SELECT account_num, primary_customer_id, secondary_customer_id, account_type, balance, account_status FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1",
 			customerID,
 		)
 		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Account])
@@ -1041,7 +1062,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 		SecondaryCustomerID int32   `json:"secondaryCustomerId"`
 		AccountType         string  `json:"accountType"`
 		Balance             float64 `json:"balance"`
-		Frozen              string  `json:"frozen"`
+		AccountStatus       string  `json:"accountStatus"`
 	}
 
 	jsonData := make([]JSONAccount, len(accountData))
@@ -1061,8 +1082,8 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 		if item.Balance.Status == pgtype.Present {
 			jsonData[i].Balance = float64(item.Balance.Int.Int64()) * math.Pow(10, float64(item.Balance.Exp))
 		}
-		if item.Frozen.Status == pgtype.Present {
-			jsonData[i].Frozen = item.Frozen.String
+		if item.AccountStatus.Status == pgtype.Present {
+			jsonData[i].AccountStatus = item.AccountStatus.String
 		}
 	}
 

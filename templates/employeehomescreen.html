@@ -62,6 +62,9 @@
                 <form action="/make-transaction" method="GET">
                     <button type="submit" class="btn btn-primary">Deposit/Withdraw</button>
                 </form>
+                <form action="/freeze-account" method="GET">
+                    <button type="submit" class="btn btn-primary">Freeze Account</button>
+                </form>
             </div>
         </section>
 
@@ -90,7 +93,7 @@
                         <th>Primary Holder ID</th>
                         <th>Secondary Holder ID</th>
                         <th>Type</th>
-                        <th>Frozen (T/F)</th>
+                        <th>Account Status</th>
                         <th>Balance</th>
                     </thead>
                     <tbody>
@@ -116,7 +119,7 @@
                     row.insertCell(1).innerText = item.primaryCustomerId;
                     row.insertCell(2).innerText = item.secondaryCustomerId;
                     row.insertCell(3).innerText = item.accountType;
-                    row.insertCell(4).innerText = item.Frozen;
+                    row.insertCell(4).innerText = item.AccountStatus;
                     row.insertCell(5).innerText = item.balance.toFixed(2);
                 }
             }
