@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -124,6 +123,7 @@ func main() {
 	http.HandleFunc("/open-account", openAccount)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/list-accounts", listAccounts)
+	http.HandleFunc("/make-transaction", makeTransaction)
 	http.HandleFunc("/list-potential-emails", listPotentialEmails)
 	http.HandleFunc("/forgot-email", forgotEmail)
 	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
@@ -153,16 +153,9 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
-	// Check if already logged in
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if loggedIn {
-		if val.(*LogInSessionCookie).ProfileType == "employee" {
+		if profileType == "employee" {
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
 			http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
@@ -174,16 +167,9 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginEmployee(w http.ResponseWriter, r *http.Request) {
-	// Check if already logged in
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if loggedIn {
-		if val.(*LogInSessionCookie).ProfileType == "employee" {
+		if profileType == "employee" {
 			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		} else {
 			http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
@@ -192,18 +178,6 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
-}
-
-func generateResetToken() string {
-	// Generate a random token (you could use a stronger method, like UUID or a hash)
-	rand.Seed(time.Now().UnixNano())
-	const tokenLength = 32
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	var token []byte
-	for i := 0; i < tokenLength; i++ {
-		token = append(token, charset[rand.Intn(len(charset))])
-	}
-	return string(token)
 }
 
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -237,24 +211,6 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/postresetpassword", http.StatusSeeOther)
 	}
 	RenderTemplate(w, "forgotpassword.html")
-}
-
-// Returns email, true if the token is valid, otherwise returns "", false
-func isValidToken(w http.ResponseWriter, r *http.Request, token string) (string, bool) {
-	// Check if the token exists
-	session, err := store.Get(r, "reset-password-session")
-	if err != nil {
-		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
-		return "", false
-	}
-	val, exists := session.Values[token]
-	var email string
-	if val != nil {
-		email = val.(string)
-	} else {
-		email = ""
-	}
-	return email, exists
 }
 
 func resetPassword(w http.ResponseWriter, r *http.Request) {
@@ -331,16 +287,21 @@ func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
 }
 
 func userDashboard(w http.ResponseWriter, r *http.Request) {
-	attemptSession, err := store.Get(r, "login-attempt-session")
-	handle(err)
-	val, ok := attemptSession.Values["data"]
-	if !ok {
-		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-user", http.StatusSeeOther)
 		return
 	}
+	if profileType == "employee" {
+		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+		return
+	}
+
 	// Valid sign-in session
-	cookie := val.(*LogInAttemptCookie)
-	email := cookie.Email
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, _ := session.Values["logged-in"]
+	email := val.(*LogInSessionCookie).Email
 	var accounts []struct {
 		AccountNum  string
 		AccountType string
@@ -389,11 +350,10 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		AddFlash(r, w, err.Error())
+		AddFlash(r, w, "e"+err.Error())
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		return
 	}
-	log.Printf("accounts: %+v", accounts)
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
@@ -574,18 +534,6 @@ func transactionHistory(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "transaction_history.html", pongo2.Context{"acclistJSON": acclistJSONString, "acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
-func capitalizeFilter(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
-	// Ensure the value is a string
-	if str, ok := value.Interface().(string); ok {
-		// Capitalize the first letter and return the value
-		if len(str) > 0 {
-			return pongo2.AsValue(strings.ToUpper(string(str[0])) + str[1:]), nil
-		}
-	}
-	// If it's not a string, return it as is
-	return pongo2.AsValue(value.Interface()), nil
-}
-
 // Callback endpoint for login requests
 func callback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -646,22 +594,6 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirect_uri, http.StatusSeeOther)
 }
 
-// SetLoggedIn is a helper function to set the login cookies
-func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAttemptCookie) {
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
-	session.Values["logged-in"] = &LogInSessionCookie{
-		LoggedIn:     true,
-		Email:        attemptCookie.Email,
-		ProfileType:  attemptCookie.ProfileType,
-		PhoneNumber:  attemptCookie.PhoneNumber,
-		PhoneCarrier: attemptCookie.PhoneCarrier,
-	}
-	err = session.Save(r, w)
-	handle(err)
-}
-
 func twofa(w http.ResponseWriter, r *http.Request) {
 	// Get the session
 	twofaSession, err := store.Get(r, "twofa-session")
@@ -688,7 +620,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			//log.Println(actualCode)
+			// log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -750,19 +682,12 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	// Redirect to login if not logged in yet
-
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
 		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
 		return
 	}
-	if val.(*LogInSessionCookie).ProfileType == "employee" {
+	if profileType == "employee" {
 		// TODO: Pass in the correct name that is stored in cookies
 		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
 	} else {
@@ -771,6 +696,16 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
+		return
+	}
+	if profileType != "employee" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		// Parse form data
 		err := r.ParseForm()
@@ -867,8 +802,17 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func openAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
+		return
+	}
+	if profileType != "employee" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
 
+	if r.Method == http.MethodPost {
 		// Parse form data
 		err := r.ParseForm()
 		if err != nil {
@@ -1035,19 +979,13 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func listAccounts(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
-	}
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
 
-	if val.(*LogInSessionCookie).ProfileType != "employee" {
+	if profileType != "employee" {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
@@ -1055,7 +993,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 	customerEmail := r.URL.Query().Get("email")
 	var customerID int
 	var accountData []models.Account
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
 		err := conn.QueryRow(
 			context.Background(),
 			`SELECT id FROM profiles WHERE email = $1 AND profile_type = 'customer'`,
@@ -1123,27 +1061,135 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
-func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "current-session")
-	handle(err)
-	val, ok := session.Values["logged-in"]
-	loggedIn := false
-	if ok {
-		loggedIn = val.(*LogInSessionCookie).LoggedIn
+func makeTransaction(w http.ResponseWriter, r *http.Request) {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
+		return
 	}
+	if profileType != "employee" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		// Parse form data
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "Unable to parse form data", http.StatusBadRequest)
+			return
+		}
+
+		// Extract the data from the form
+		transactionType := r.FormValue("transaction_type")
+		if transactionType != "deposit" && transactionType != "withdraw" {
+			AddFlash(r, w, "eInvalid transaction type.")
+			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
+			return
+		}
+		source := r.FormValue("source")
+		recipient := r.FormValue("recipient")
+		if recipient == "" {
+			AddFlash(r, w, "eRecipient is a required field.")
+			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
+			return
+		}
+		// Extract transaction amount
+		amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
+
+		// Create the transaction and update the account balance
+		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
+		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			_, err := conn.Exec(
+				context.Background(),
+				fmt.Sprintf(
+					`DO
+					$do$
+					BEGIN
+						INSERT INTO transactions(
+							source_account, recipient_account, amount, transaction_type, transaction_timestamp
+						) VALUES (
+							NULLIF('%[1]s', ''), '%[2]s', %[3]f::numeric, '%[4]s', NOW()
+						);
+
+						-- source -> recipient
+
+						UPDATE accounts SET balance=(
+							SELECT balance + (
+								CASE
+									WHEN '%[4]s'='deposit' THEN %[3]f::numeric
+									WHEN '%[4]s'='withdraw' THEN -1 * %[3]f::numeric
+									ELSE %[3]f::numeric
+								END
+							)
+							FROM accounts WHERE account_num='%[2]s'
+						)
+						WHERE account_num='%[2]s';
+
+						IF '%[1]s' <> '' THEN
+							UPDATE accounts SET balance=(
+								SELECT balance - (
+									CASE
+										WHEN '%[4]s'='deposit' THEN %[3]f::numeric
+										WHEN '%[4]s'='withdraw' THEN -1 * %[3]f::numeric
+										ELSE %[3]f::numeric
+									END
+								)
+								FROM accounts WHERE account_num='%[1]s'
+							)
+							WHERE account_num='%[1]s';
+						END IF;
+					END
+					$do$
+					`,
+					source,
+					recipient,
+					amount,
+					transactionType,
+				),
+			)
+
+			// Check for error and return if any
+			if err != nil {
+				return fmt.Errorf("Failed to complete this transaction: %v", err)
+			}
+
+			// Success, return nil to indicate the user has been added
+			return nil
+		})
+		if err != nil {
+			AddFlash(r, w, "e"+err.Error())
+			http.Redirect(w, r, "/make-transaction", http.StatusSeeOther)
+			return
+		}
+
+		// Flash message after successful insertion
+		AddFlash(r, w, fmt.Sprintf("s%s of $%.2f completed successfully!", strings.Title(transactionType), amount))
+
+		// Respond with a success message
+		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+	}
+
+	// Quality of life improvement would be to somehow persist the form data for a retry
+	// Render the make transaction form (in case of GET request or on error)
+	RenderTemplate(w, "depositwithdraw.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+}
+
+func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
+	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
-	if val.(*LogInSessionCookie).ProfileType != "employee" {
+	if profileType != "employee" {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
 		return
 	}
 	customerEmail := r.URL.Query().Get("email") + "%" //% is used to search for emails that start with the given email
 	var potential_emails []string
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
 		query := `SELECT email FROM profiles WHERE email LIKE $1 AND profile_type = 'customer' ORDER BY email LIMIT 20`
-		rows, _ := conn.Query(context.Background(), query, customerEmail)
+		rows, err := conn.Query(context.Background(), query, customerEmail)
 		if err != nil {
 			return err
 		}
