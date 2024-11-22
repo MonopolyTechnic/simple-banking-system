@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/gob"
 	"encoding/json"
 	"errors"
@@ -14,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"database/sql"
+
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
 	"github.com/gorilla/sessions"
@@ -388,7 +389,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
-func transactionHistory(w http.ResponseWriter, r *http.Request){
+func transactionHistory(w http.ResponseWriter, r *http.Request) {
 	attemptSession, err := store.Get(r, "login-attempt-session")
 	handle(err)
 	val, ok := attemptSession.Values["data"]
@@ -399,11 +400,11 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 	// Valid sign-in session
 	cookie := val.(*LogInAttemptCookie)
 	email := cookie.Email
-    var accounts []struct {
-        Number   string `json:"Number"`
-        Outgoing []transaction `json:"Outgoing"`
-        Incoming []transaction `json:"Incoming"`
-    }
+	var accounts []struct {
+		Number   string        `json:"Number"`
+		Outgoing []transaction `json:"Outgoing"`
+		Incoming []transaction `json:"Incoming"`
+	}
 	var name string
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 		// Query to get the customer ID for the primary customer email
@@ -426,7 +427,7 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 			return fmt.Errorf("Invalid return from accounts: %s", email)
 		}
 		defer accrows.Close()
-		for accrows.Next(){
+		for accrows.Next() {
 			outgoing := []transaction{}
 			incoming := []transaction{}
 			var accnum string
@@ -435,35 +436,44 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 			}
 			rows, err := conn.Query(
 				context.Background(),
-				`SELECT source_account, recipient_account, amount, transaction_type, transaction_timestamp FROM transactions WHERE source_account = $1 OR recipient_account = $1`,
+				`SELECT
+					source_account,
+					recipient_account,
+					amount,
+					transaction_type,
+					transaction_timestamp
+				FROM transactions
+				WHERE source_account = $1 OR recipient_account = $1
+				ORDER BY transaction_timestamp DESC
+				`,
 				accnum, // Use the customer ID obtained earlier
 			)
-	
+
 			if err != nil {
 				return fmt.Errorf("Invalid return from accounts: %s", email)
 			}
 			defer rows.Close()
-	
+
 			for rows.Next() {
-				var sc string
+				var sc sql.NullString
 				var rc string
 				var tmp struct {
 					AccNum string
-					Type string
+					Type   string
 					Amount float64
-					Date time.Time
+					Date   time.Time
 				}
 				if err := rows.Scan(&sc, &rc, &tmp.Amount, &tmp.Type, &tmp.Date); err != nil {
 					return fmt.Errorf("Error scanning account row: %v", err)
 				}
-				if sc == accnum {
+				if sc.String == accnum {
 					tmp.AccNum = rc
 				} else {
-					tmp.AccNum = sc
+					tmp.AccNum = sc.String
 				}
 				var othername string
-				if tmp.AccNum == ""{
-					if sc == "" {
+				if tmp.AccNum == "" {
+					if tmp.Type == "deposit" {
 						othername = "ATM DEPOSIT"
 					} else {
 						othername = "ATM WITHDRAWAL"
@@ -490,7 +500,7 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 					if err != nil {
 						return fmt.Errorf("Name of account %s cannot be displayed 2. %v", pcid, err)
 					}
-					if (!mn.Valid){
+					if !mn.Valid {
 						othername = fn + " " + ln
 					} else {
 						othername = fn + " " + mn.String + " " + ln
@@ -506,27 +516,27 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 						if err != nil {
 							return fmt.Errorf("Name of account %s cannot be displayed.", pcid)
 						}
-						if (!mn.Valid){
+						if !mn.Valid {
 							othername += fn + " " + ln
 						} else {
 							othername += fn + " " + mn.String + " " + ln
 						}
 					}
-				} 
-				var tran  = transaction{
-					Name: othername,
-					Type: tmp.Type,
-					Amount: tmp.Amount,
-					Date: tmp.Date,
 				}
-				if (sc == accnum) {
+				var tran = transaction{
+					Name:   othername,
+					Type:   tmp.Type,
+					Amount: tmp.Amount,
+					Date:   tmp.Date,
+				}
+				if sc.String == accnum {
 					outgoing = append(outgoing, tran)
 				} else {
 					incoming = append(incoming, tran)
 				}
 			}
-			var acc struct{
-				Number   string `json:"Number"`
+			var acc struct {
+				Number   string        `json:"Number"`
 				Outgoing []transaction `json:"Outgoing"`
 				Incoming []transaction `json:"Incoming"`
 			}
@@ -547,10 +557,10 @@ func transactionHistory(w http.ResponseWriter, r *http.Request){
 	}
 	//log.Printf("accounts: %+v", accounts)
 	acclistJSON, err := json.Marshal(accounts)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	acclistJSONString := string(acclistJSON)
 	//log.Printf("accountsJSONString: %s", acclistJSONString)
 	RenderTemplate(w, "transaction_history.html", pongo2.Context{"acclistJSON": acclistJSONString, "acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
@@ -670,7 +680,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			// log.Println(actualCode)
+			log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
