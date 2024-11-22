@@ -333,22 +333,16 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		defer rows.Close()
 
 		for rows.Next() {
-			var frz string
 			var account struct {
 				AccountNum    string
 				AccountType   string
 				Balance       float64
 				AccountStatus string
 			}
-			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance, &frz); err != nil {
+			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance, &account.AccountStatus); err != nil {
 				return fmt.Errorf("Error scanning account row: %v", err)
 			}
 			account.Balance = math.Round(account.Balance*100) / 100
-			if frz == "FROZEN" {
-				account.AccountStatus = "FROZEN ACCOUNT"
-			} else {
-				account.AccountStatus = ""
-			}
 			// Append each account to the slice
 			accounts = append(accounts, account)
 		}
@@ -866,6 +860,17 @@ func changeStatus(w http.ResponseWriter, r *http.Request) {
 		targetstatus := r.FormValue("targetstatus")
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			var tmp string
+			if targetstatus == "CLOSED" {
+				var bal float64
+				err = conn.QueryRow(
+					context.Background(),
+					`SELECT balance FROM accounts WHERE account_num = $1`,
+					account_num,
+				).Scan(&bal)
+				if (bal >= 0.01) {
+					return fmt.Errorf("Balance too high to close account.")
+				}
+			}
 			err = conn.QueryRow(
 				context.Background(),
 				`UPDATE accounts SET account_status = $1 WHERE account_num = $2 RETURNING account_status`,
@@ -1299,12 +1304,6 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Create the transaction and update the account balance
 		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-			if source != "" {
-				err := checkStatus(conn, source)
-				if err != nil {
-					return fmt.Errorf("Account failure: %v", err)
-				}
-			}
 			err = checkStatus(conn, recipient)
 			if err != nil {
 				return fmt.Errorf("Account failure: %v", err)
