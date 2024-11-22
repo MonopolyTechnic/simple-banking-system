@@ -10,21 +10,29 @@
 
 <body>
     <div class="centertextleft">
-        <h1 class="h1smaller">Freeze Account</h1>
+        <h1 class="h1smaller">Change Account Status</h1>
         <p>Enter the required details below:</p>
         {% for flash in flashes %}
             <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
         {% endfor %}
     </div>
 
-    <form action="/freeze-account" method="POST">
+    <form action="/change-status" method="POST">
         <!-- Admin First Name -->
         <label for="accnum">Account Number</label>
         <input type="text" id="accnum" name="accnum" required placeholder="Enter account number">
 
+        <!-- Target Status Dropdown -->
+        <label for="targetstatus">Target Status</label>
+        <select id="targetstatus" name="targetstatus" required>
+            <option value="OPEN">OPEN</option>
+            <option value="CLOSED">CLOSED</option>
+            <option value="FROZEN">FROZEN</option>
+        </select>
+
         <!-- Submit Button -->
         <div class="smallerbuttoncenter">
-            <input type="submit" value="Add User">
+            <input type="submit" value="Change Status">
         </div>
     </form>
 </body>

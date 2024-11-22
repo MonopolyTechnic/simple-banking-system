@@ -131,7 +131,7 @@ func main() {
 	http.HandleFunc("/user-dashboard", userDashboard)
 	http.HandleFunc("/transaction-history", transactionHistory)
 	http.HandleFunc("/transfer", transfer)
-	http.HandleFunc("/freeze-account", freezeAccount)
+	http.HandleFunc("/change-status", changeStatus)
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
@@ -327,9 +327,8 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 			`SELECT account_num, account_type, balance, account_status FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1`,
 			id, // Use the customer ID obtained earlier
 		)
-
 		if err != nil {
-			return fmt.Errorf("Invalid return from accounts: %s", email)
+			return fmt.Errorf("Invalid account: %s", id)
 		}
 		defer rows.Close()
 
@@ -450,9 +449,17 @@ func transfer(w http.ResponseWriter, r *http.Request){
 		}
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Query to get the customer ID for the primary customer email
+			err := checkStatus(conn, sourceAccount)
+			if err != nil{
+				return fmt.Errorf("Account failure: %v", err)
+			}
+			err = checkStatus(conn, destinationAccount)
+			if err != nil{
+				return fmt.Errorf("Account failure: %v", err)
+			}
 			var dbal float64
 			var tmp float64
-			err := conn.QueryRow(
+			err = conn.QueryRow(
 				context.Background(),
 				`SELECT balance FROM accounts WHERE account_num = $1`,
 				destinationAccount,
@@ -736,7 +743,6 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	attemptSession.Options.MaxAge = 30 * 60 // 30 minutes
 	err = attemptSession.Save(r, w)
 	handle(err)
-
 	redirect_uri := fmt.Sprintf("/twofa")
 	http.Redirect(w, r, redirect_uri, http.StatusSeeOther)
 }
@@ -813,7 +819,6 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	// Mark as logged in
 	session, err := store.Get(r, "current-session")
 	handle(err)
-
 	session.Values["logged-in"] = &LogInSessionCookie{
 		LoggedIn:     false,
 		Email:        "",
@@ -823,7 +828,6 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	}
 	err = session.Save(r, w)
 	handle(err)
-
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -842,10 +846,10 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func freezeAccount(w http.ResponseWriter, r *http.Request) {
+func changeStatus(w http.ResponseWriter, r *http.Request) {
 	attemptSession, err := store.Get(r, "login-attempt-session")
 	handle(err)
-	val, ok := attemptSession.Values["data"]
+	_, ok := attemptSession.Values["data"]
 	if !ok {
 		http.Redirect(w, r, "/logout", http.StatusSeeOther)
 		return
@@ -859,10 +863,30 @@ func freezeAccount(w http.ResponseWriter, r *http.Request) {
 
 		// Extract the data from the form
 		account_num := r.FormValue("accnum")
+		targetstatus := r.FormValue("targetstatus")
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-
+			var tmp string
+			err = conn.QueryRow(
+				context.Background(),
+				`UPDATE accounts SET account_status = $1 WHERE account_num = $2 RETURNING account_status`,
+				targetstatus, account_num,
+			).Scan(&tmp)
+			if err != nil {
+				return fmt.Errorf("Bad Update: %v", err)
+			}
+			return nil
 		})
+		if err != nil{
+			AddFlash(r, w, "e"+err.Error())
+			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+			return
+		} else {
+			AddFlash(r, w, fmt.Sprintf("sAccount %s Status changed to %s", account_num, targetstatus))
+			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+			return
+		}
 	}
+	RenderTemplate(w, "freezeaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
@@ -1190,7 +1214,6 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 		return nil
 	})
-
 	if err != nil {
 		AddFlash(r, w, "eNo matching email.")
 		http.Error(w, "No matching email", http.StatusNotFound)
@@ -1276,11 +1299,11 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Create the transaction and update the account balance
 		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-			err := checkFrozen(conn, source)
+			err := checkStatus(conn, source)
 			if err != nil{
 				return fmt.Errorf("Account failure: %v", err)
 			}
-			err = checkFrozen(conn, recipient)
+			err = checkStatus(conn, recipient)
 			if err != nil{
 				return fmt.Errorf("Account failure: %v", err)
 			}
