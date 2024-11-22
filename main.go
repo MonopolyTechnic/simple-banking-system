@@ -988,6 +988,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func listAccounts(w http.ResponseWriter, r *http.Request) {
+	log.Println("List accounts")
 	profileType, loggedIn := checkLoggedIn(r, w)
 	if !loggedIn {
 		http.Error(w, "Unauthorized request", http.StatusUnauthorized)
@@ -1307,15 +1308,15 @@ func settings(w http.ResponseWriter, r *http.Request) {
 	userEmail := val.(*LogInSessionCookie).Email
 	maskedPassword := val.(*LogInSessionCookie).MaskedPassword
 
-	var firstName, phoneNumber string
+	var profileType, firstName, phoneNumber string
 
 	// Retrieve the first_name for the logged-in user using email
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 		return conn.QueryRow(
 			context.Background(),
-			"SELECT first_name, phone_number FROM profiles WHERE email = $1",
+			"SELECT profile_type, first_name, phone_number FROM profiles WHERE email = $1",
 			userEmail,
-		).Scan(&firstName, &phoneNumber)
+		).Scan(&profileType, &firstName, &phoneNumber)
 	})
 	if err != nil {
 		// Handle the error (e.g., log or return an error message)
@@ -1324,5 +1325,5 @@ func settings(w http.ResponseWriter, r *http.Request) {
 
 	recentLogin := time.Now().Format("2006-01-02 15:04:05")
 
-	RenderTemplate(w, "settings.html", pongo2.Context{"fname": firstName, "recentLogin": recentLogin, "email": userEmail, "phoneNumber": phoneNumber, "maskedPassword": maskedPassword})
+	RenderTemplate(w, "settings.html", pongo2.Context{"profileType": profileType, "fname": firstName, "recentLogin": recentLogin, "email": userEmail, "phoneNumber": phoneNumber, "maskedPassword": maskedPassword})
 }

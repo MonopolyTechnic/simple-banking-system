@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Monopoly-Technic</title>
+    <title>Settings</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style2.css">
+    <link rel="stylesheet" href="/static/settings.css">
     <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
@@ -20,6 +20,8 @@
         {% endfor %}
     </div>
 
+    <!-- Employee Settings -->
+    {% if profileType == "employee" %}
     <!-- Header Section -->
     <header>
         <div class="top-header">
@@ -42,7 +44,7 @@
             </div>
         </div>
         <div class="header-bottom">
-            <h1 class="welcome-message">Hello, {{ fname }}!</h1>
+            <h2 class="welcome-message">Hello, {{ fname }}!</h2>
         </div>
     </header>
 
@@ -51,7 +53,7 @@
         <!-- Header Section -->
         <section class="user-section">
             <div class="section-header">
-                <h1 class="section-title">Settings</h1>
+                <h2 class="section-title">Settings</h2>
             </div>
         </section>
     
@@ -87,7 +89,65 @@
                 </div>
             </div>
         </section>
-        
     </main>
+
+    <!-- Customer Settings -->
+    {% else %}
+    <h1>Welcome, {{fname}}</h1>
+
+    <!-- Navigation Bar -->
+    <div class="nav-bar">
+        <a href="/user-dashboard">Dashboard</a>
+        <a href="#">Transfer</a>
+        <a href="#">Statements</a>
+        <a href="/transaction-history">Transactions</a>
+        <a href="#">Notifications</a>
+        <a href="/settings">Settings</a>
+    </div>
+
+    <!-- Main Content -->
+    <main class="content-container">
+        <!-- Header Section -->
+        <section class="user-section">
+            <div class="section-header">
+                <h2 class="section-title">Settings</h2>
+            </div>
+        </section>
+    
+        <!-- Settings Display -->
+        <section class="security-settings-section">
+            <div class="settings-subsection">
+                <h2 class="subheading">Security</h2>
+                <hr class="section-divider"></h2>
+            </div>
+            <div class="settings-info">
+                <div class="settings-item">
+                    <label>Password:</label>
+                    <span class="user-detail">{{ maskedPassword }}</span>
+                </div>
+                <div class="settings-item">
+                    <label>Recent login:</label>
+                    <span class="user-detail">{{ recentLogin }}</span>
+                </div>
+            </div>
+
+            <div class="settings-subsection">
+                <h2 class="subheading">Contact Preferences</h2>
+                <hr class="section-divider"></hr>
+            </div>
+            <div class="settings-info">
+                <div class="settings-item">
+                    <label>Email:</label>
+                    <span class="user-detail">{{ email }}</span>
+                </div>
+                <div class="settings-item">
+                    <label>Phone Number:</label>
+                    <span class="user-detail">{{ phoneNumber }}</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    {% endif %}
 </body>
 </html>
