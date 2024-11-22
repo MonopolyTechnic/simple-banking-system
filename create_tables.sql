@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS accounts(
     ,balance                NUMERIC(15, 2)  -- 15 digits, with 2 of those being after the decimal
                             NOT NULL
                             CHECK (balance >= 0)
+    ,frozen                 VARCHAR(1)
     ,FOREIGN KEY (primary_customer_id)
         REFERENCES profiles(id)
     ,FOREIGN KEY (secondary_customer_id)

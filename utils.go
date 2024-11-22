@@ -240,6 +240,22 @@ func SendEmail(endemail string, subject string, body string) error {
 
 }
 
+func checkFrozen(conn *pgxpool.Pool, account_num string) error {
+	var frozen string
+	err := conn.QueryRow(
+		context.Background(),
+		`SELECT frozen FROM accounts WHERE account_num = $1`,
+		account_num,
+	).Scan(&frozen)
+	if err != nil{
+		return err
+	}
+	if frozen.String == "T"{
+		return fmt.Sprintf("account %s frozen", accnum)
+	}
+	return nil
+}
+
 // Helper function to send a verification code to a phone number given the carrier
 func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 	emailSender = env["EMAIL_SENDER"] // Read email sender from environment

@@ -32,6 +32,7 @@
                 <h3>{{ account.AccountType | capitalize }} Account</h3>
                 <p>Account Number: {{ account.AccountNum }}</p>
                 <p>Balance: ${{ account.Balance | formatBalance }}</p>
+                <p>{{ account.Frozen }}</p>
                 <div class="button-container">
                     <button class="button">View Account</button>
                 </div>

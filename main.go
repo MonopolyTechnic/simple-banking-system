@@ -306,6 +306,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		AccountNum  string
 		AccountType string
 		Balance     float64
+		Frozen      string
 	}
 	var name string
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
@@ -322,7 +323,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 		rows, err := conn.Query(
 			context.Background(),
-			`SELECT account_num, account_type, balance FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1`,
+			`SELECT account_num, account_type, balance, frozen FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1`,
 			id, // Use the customer ID obtained earlier
 		)
 
@@ -332,15 +333,22 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		defer rows.Close()
 
 		for rows.Next() {
+			var frz string
 			var account struct {
 				AccountNum  string
 				AccountType string
 				Balance     float64
+				Frozen      string
 			}
-			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance); err != nil {
+			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance, &frz); err != nil {
 				return fmt.Errorf("Error scanning account row: %v", err)
 			}
 			account.Balance = math.Round(account.Balance*100) / 100
+			if frz == 'T'{
+				account.Frozen = "FROZEN ACCOUNT"
+			} else {
+				account.Frozen = ""
+			}
 			// Append each account to the slice
 			accounts = append(accounts, account)
 		}
@@ -905,9 +913,10 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 						account_num,
 						primary_customer_id,
 						account_type,
-						balance
+						balance,
+						frozen
 					) VALUES (
-						$1, $2, $3, $4
+						$1, $2, $3, $4, 'F'
 					)`
 				log.Println("secondaryCustomerID is", secondaryCustomerID)
 				// Execute the query
@@ -938,9 +947,10 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 						primary_customer_id,
 						secondary_customer_id,
 						account_type,
-						balance
+						balance,
+						frozen
 					) VALUES (
-						$1, $2, $3, $4, $5
+						$1, $2, $3, $4, $5, 'F'
 					)`
 				log.Println("secondaryCustomerID is", secondaryCustomerID)
 				// Execute the query
@@ -1006,7 +1016,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 		rows, _ := conn.Query(
 			context.Background(),
-			"SELECT account_num, primary_customer_id, secondary_customer_id, account_type, balance FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1",
+			"SELECT account_num, primary_customer_id, secondary_customer_id, account_type, balance, frozen FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1",
 			customerID,
 		)
 		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Account])
@@ -1031,6 +1041,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 		SecondaryCustomerID int32   `json:"secondaryCustomerId"`
 		AccountType         string  `json:"accountType"`
 		Balance             float64 `json:"balance"`
+		Frozen              string  `json:"frozen"`
 	}
 
 	jsonData := make([]JSONAccount, len(accountData))
@@ -1049,6 +1060,9 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 		}
 		if item.Balance.Status == pgtype.Present {
 			jsonData[i].Balance = float64(item.Balance.Int.Int64()) * math.Pow(10, float64(item.Balance.Exp))
+		}
+		if item.Frozen.Status == pgtype.Present {
+			jsonData[i].Frozen = item.Frozen.String
 		}
 	}
 
@@ -1100,7 +1114,15 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Create the transaction and update the account balance
 		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-			_, err := conn.Exec(
+			err := checkFrozen(conn, source)
+			if err != nil{
+				return fmt.Errorf("Account failure: %v", err)
+			}
+			err = checkFrozen(conn, recipient)
+			if err != nil{
+				return fmt.Errorf("Account failure: %v", err)
+			}
+			_, err = conn.Exec(
 				context.Background(),
 				fmt.Sprintf(
 					`DO
