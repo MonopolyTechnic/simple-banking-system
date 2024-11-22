@@ -56,7 +56,38 @@
         </section>
     
         <!-- Settings Display -->
+        <section class="security-settings-section">
+            <div class="settings-subsection">
+                <h2 class="subheading">Security</h2>
+                <hr class="section-divider">
+            </div>
+            <div class="settings-info">
+                <div class="settings-item">
+                    <label>Password:</label>
+                    <span class="user-detail">*********</span>
+                </div>
+                <div class="settings-item">
+                    <label>Recent login:</label>
+                    <span class="user-detail">{{ recentLogin }}</span>
+                </div>
+            </div>
 
+            <div class="settings-subsection">
+                <h2 class="subheading">Contact Preferences</h2>
+                <hr class="section-divider">
+            </div>
+            <div class="settings-info">
+                <div class="settings-item">
+                    <label>Email:</label>
+                    <span class="user-detail">{{ email }}</span>
+                </div>
+                <div class="settings-item">
+                    <label>Phone Number:</label>
+                    <span class="user-detail">{{ phoneNumber }}</span>
+                </div>
+            </div>
+        </section>
+        
     </main>
 </body>
 </html>

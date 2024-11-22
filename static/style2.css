@@ -197,3 +197,55 @@ body {
     align-items: center;
     position: relative;
 }
+
+/* Security Settings Section */
+.security-settings-section {
+    width: 100%;
+    padding: 10px 0;  /* Adjust padding as needed */
+}
+
+.settings-subsection {
+    display: flex;
+    align-items: center;
+    gap: 10px; 
+}
+
+.subheading {
+    color: #555;
+    font-weight: lighter;
+    font-size: 18px;
+    margin: 0;
+}
+
+.section-divider {
+    flex-grow: 1;
+    border: none;
+    height: 1px;
+    background-color: #666;
+    margin: 0;
+}
+
+/* Security Info Section */
+.settings-info {
+    margin-top: 15px; /* Add space above the content */
+    margin-bottom: 60px;
+}
+
+.settings-item {
+    display: flex;
+    margin-bottom: 10px; /* Add space between rows */
+    font-size: 14px; /* Adjust text size */
+}
+
+.settings-item label {
+    font-weight: bold;
+    margin-right: 5px;
+    color: #555; /* Matches the subheading color */
+}
+
+.security-item .user-detail {
+    color: #333; /* Slightly darker text for details */
+}
+
+
+

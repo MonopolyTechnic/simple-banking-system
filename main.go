@@ -1071,21 +1071,22 @@ func settings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userEmail := val.(*LogInSessionCookie).Email
-	var firstName string
+	var firstName, phoneNumber string
 
 	// Retrieve the first_name for the logged-in user using email
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 		return conn.QueryRow(
 			context.Background(),
-			"SELECT first_name FROM profiles WHERE email = $1",
+			"SELECT first_name, phone_number FROM profiles WHERE email = $1",
 			userEmail,
-		).Scan(&firstName)
+		).Scan(&firstName, &phoneNumber)
 	})
-
 	if err != nil {
-		http.Error(w, "Error retrieving user information", http.StatusInternalServerError)
-		return
+		// Handle the error (e.g., log or return an error message)
+		log.Println("Error retrieving user data:", err)
 	}
 
-	RenderTemplate(w, "settings.html", pongo2.Context{"fname": firstName})
+	recentLogin := time.Now().Format("2006-01-02 15:04:05")
+
+	RenderTemplate(w, "settings.html", pongo2.Context{"fname": firstName, "recentLogin": recentLogin, "email": userEmail, "phoneNumber": phoneNumber})
 }
