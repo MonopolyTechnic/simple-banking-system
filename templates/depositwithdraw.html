@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" href="/static/formstyle.css"> <!-- Link to CSS -->
+    <title>Deposit/Withdraw Money</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div class="centertextleft">
+        <h1 class="h1smaller">Deposit/Withdraw Money</h1>
+        <p>Fill out the details to deposit or withdraw from an account</p>
+        <!-- Flash Message Section (if any) -->
+        {% for flash in flashes %}
+            <p class="flash flash-error">{{ flash }}</p>
+        {% endfor %}
+    </div>
+
+    <form action="/make-transaction" method="POST">
+        <!-- Transaction Type -->
+        <label for="transaction_type">Transaction Type</label>
+        <select id="transaction_type" name="transaction_type" required>
+            <option value="deposit">Deposit</option>
+            <option value="withdraw">Withdraw</option>
+        </select>
+
+        <!-- Account Number -->
+        <label for="recipient">Account Number</label>
+        <input type="text" id="recipient" name="recipient" required placeholder="1111222233334444">
+
+        <!-- Transaction Amount -->
+        <label for="amount">Transaction Amount</label>
+        <input type="number" id="amount" name="amount" required min="0" placeholder="Enter transaction amount" step="0.01">
+
+        <!-- Submit Button -->
+        <div class="smallerbuttoncenter">
+            <input type="submit" value="Submit">
+        </div>
+    </form>
+
+</body>
+</html>
