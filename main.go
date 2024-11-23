@@ -602,6 +602,9 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		if r.URL.Query().Get("retry") != "true" {
+			if r.URL.Query().Get("resend") == "true" {
+				AddFlash(r, w, "sA new code has been sent to your phone. Please enter the new code.")
+			}
 			attemptSession, err := store.Get(r, "login-attempt-session")
 			handle(err)
 			val, ok := attemptSession.Values["data"]
