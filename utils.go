@@ -247,13 +247,13 @@ func checkStatus(conn *pgxpool.Pool, account_num string) error {
 		`SELECT account_status FROM accounts WHERE account_num = $1`,
 		account_num,
 	).Scan(&frozen)
-	if err != nil{
+	if err != nil {
 		return err
 	}
-	if !(frozen.Valid){
+	if !(frozen.Valid) {
 		return fmt.Errorf("account %s status unavailable", account_num)
 	}
-	if frozen.String != "OPEN"{
+	if frozen.String != "OPEN" {
 		return fmt.Errorf("account %s %s", account_num, frozen.String)
 	}
 	return nil
