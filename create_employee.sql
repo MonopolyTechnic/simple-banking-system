@@ -16,6 +16,7 @@ INSERT INTO profiles(
     ,phone_number
     ,phone_carrier
     ,password_hash
+    ,masked_password
 ) VALUES (
     'employee'
     ,COALESCE(NULLIF(:'fname', ''), 'Admin')
@@ -26,4 +27,5 @@ INSERT INTO profiles(
     ,:'phonenum'
     ,:'carrier'
     ,crypt(:'pw', gen_salt('bf', 10))::BYTEA
+    ,CONCAT(SUBSTRING(:'pw' FROM 1 FOR 1), REPEAT('*', LENGTH(:'pw') - 1))
 );
