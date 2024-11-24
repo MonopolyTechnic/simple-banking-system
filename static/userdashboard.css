@@ -17,6 +17,22 @@ a:visited {
     color: purple; /* Change color for visited links */
 }
 
+.flash-messages {
+    text-align: center;
+}
+
+.flash-error {
+    color: #a8313b;
+}
+
+.flash-success {
+    color: #388f6c;
+}
+
+.flash-info {
+    color: #33618f;
+}
+
 body {
     display: flex;
     flex-direction: column;
@@ -102,6 +118,52 @@ h1 {
 }
 
 .button:hover {
+    background-color: #e7e7e7;
+    color: #545F71;
+}
+
+/* Minimal adjustments to add spacing in form elements */
+.transfer-form {
+    max-width: 500px;
+    margin: 20px auto;  /* Center the form with margin */
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.transfer-form .form-group {
+    margin-bottom: 20px; /* Spacing between form groups */
+}
+
+.transfer-form .form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.transfer-form .form-group input,
+.transfer-form .form-group select {
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.transfer-form .form-group button {
+    width: 100%;
+    padding: 10px;
+    background-color: #545F71;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1em;
+    border: none;
+}
+
+.transfer-form .form-group button:hover {
     background-color: #e7e7e7;
     color: #545F71;
 }

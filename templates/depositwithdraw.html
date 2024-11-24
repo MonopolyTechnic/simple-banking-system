@@ -14,7 +14,7 @@
         <p>Fill out the details to deposit or withdraw from an account</p>
         <!-- Flash Message Section (if any) -->
         {% for flash in flashes %}
-            <p class="flash flash-error">{{ flash }}</p>
+            <p class="flash flash-{{flash |getFlashType}}">{{ flash | getFlashMessage }}</p>
         {% endfor %}
     </div>
 

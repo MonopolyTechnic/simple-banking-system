@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -100,7 +101,6 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 func AddFlash(r *http.Request, w http.ResponseWriter, msg string) {
 	flashSession, err2 := store.Get(r, "flash-session")
 	handle(err2)
-
 	flashSession.AddFlash(msg)
 	err2 = flashSession.Save(r, w)
 	handle(err2)
@@ -238,6 +238,25 @@ func SendEmail(endemail string, subject string, body string) error {
 	c.Quit()
 	return nil
 
+}
+
+func checkStatus(conn *pgxpool.Pool, account_num string) error {
+	var frozen sql.NullString
+	err := conn.QueryRow(
+		context.Background(),
+		`SELECT account_status FROM accounts WHERE account_num = $1`,
+		account_num,
+	).Scan(&frozen)
+	if err != nil {
+		return err
+	}
+	if !(frozen.Valid) {
+		return fmt.Errorf("account %s status unavailable", account_num)
+	}
+	if frozen.String != "OPEN" {
+		return fmt.Errorf("account %s %s", account_num, frozen.String)
+	}
+	return nil
 }
 
 // Helper function to send a verification code to a phone number given the carrier
