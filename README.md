@@ -13,11 +13,11 @@ A simple banking system template that can be used by banks.
 7. Exit the psql session by typing `\q`.
 8. Reconnect to psql with the new password.
 9. Run `CREATE DATABASE banking;`
-10. Create a `.env` file and fill in values like in `.env.example`
+10. Create a `.env` file and fill in values by following the example in `.env.example`
 
 ### Run the webserver
 1. Run `go run .`
-2. The server should be up on port 5000!
+2. The server should be up on the port specified in `.env`
 
 ### Adding an Employee
 These steps should be done after running the webserver at least once.
