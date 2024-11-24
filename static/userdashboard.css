@@ -139,9 +139,11 @@ body {
 }
 
 .accounts-container {
-    margin-top: 30px;
+    margin: 30px auto; /* Center horizontally with automatic left and right margins */
     width: 80%;
     max-width: 600px;
+    display: block;
+    text-align: center;
 }
 
 .account-card {
