@@ -131,6 +131,7 @@ func main() {
 	http.HandleFunc("/user-dashboard", userDashboard)
 	http.HandleFunc("/transaction-history", transactionHistory)
 	http.HandleFunc("/transfer", transfer)
+	http.HandleFunc("/change-status", changeStatus)
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
@@ -303,9 +304,10 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 	val, _ := session.Values["logged-in"]
 	email := val.(*LogInSessionCookie).Email
 	var accounts []struct {
-		AccountNum  string
-		AccountType string
-		Balance     float64
+		AccountNum    string
+		AccountType   string
+		Balance       float64
+		AccountStatus string
 	}
 	var name string
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
@@ -322,22 +324,22 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 		rows, err := conn.Query(
 			context.Background(),
-			`SELECT account_num, account_type, balance FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1`,
+			`SELECT account_num, account_type, balance, account_status FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1`,
 			id, // Use the customer ID obtained earlier
 		)
-
 		if err != nil {
-			return fmt.Errorf("Invalid return from accounts: %s", email)
+			return fmt.Errorf("Invalid account: %s", id)
 		}
 		defer rows.Close()
 
 		for rows.Next() {
 			var account struct {
-				AccountNum  string
-				AccountType string
-				Balance     float64
+				AccountNum    string
+				AccountType   string
+				Balance       float64
+				AccountStatus string
 			}
-			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance); err != nil {
+			if err := rows.Scan(&account.AccountNum, &account.AccountType, &account.Balance, &account.AccountStatus); err != nil {
 				return fmt.Errorf("Error scanning account row: %v", err)
 			}
 			account.Balance = math.Round(account.Balance*100) / 100
@@ -358,20 +360,27 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
-func transfer(w http.ResponseWriter, r *http.Request){
-	attemptSession, err := store.Get(r, "login-attempt-session")
-	handle(err)
-	val, ok := attemptSession.Values["data"]
-	if !ok {
-		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+func transfer(w http.ResponseWriter, r *http.Request) {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-user", http.StatusSeeOther)
 		return
 	}
+	if profileType != "customer" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
+	// Valid sign-in session
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, _ := session.Values["logged-in"]
+	email := val.(*LogInSessionCookie).Email
+
 	var accounts []struct {
-		Number string `json:"Number"`
+		Number  string  `json:"Number"`
 		Balance float64 `json:"Balance"`
 	}
-	cookie := val.(*LogInAttemptCookie)
-	email := cookie.Email
 	var name string
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 		// Query to get the customer ID for the primary customer email
@@ -398,7 +407,7 @@ func transfer(w http.ResponseWriter, r *http.Request){
 
 		for rows.Next() {
 			var account struct {
-				Number string `json:"Number"`
+				Number  string  `json:"Number"`
 				Balance float64 `json:"Balance"`
 			}
 			if err := rows.Scan(&account.Number, &account.Balance); err != nil {
@@ -414,36 +423,44 @@ func transfer(w http.ResponseWriter, r *http.Request){
 	if err != nil {
 		AddFlash(r, w, "e"+err.Error())
 	}
-	if (r.Method == http.MethodPost){
+	if r.Method == http.MethodPost {
 
 		sourceAccount := r.FormValue("sourceAccount")
-        destinationAccount := r.FormValue("destinationAccount")
-        amountStr := r.FormValue("amount")
-        amount, err := strconv.ParseFloat(amountStr, 64)
-        if err != nil {
-            AddFlash(r, w, err.Error())
+		destinationAccount := r.FormValue("destinationAccount")
+		amountStr := r.FormValue("amount")
+		amount, err := strconv.ParseFloat(amountStr, 64)
+		if err != nil {
+			AddFlash(r, w, "e"+err.Error())
 			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
-        }
+		}
 		index := -1
 		for i := 0; i < len(accounts); i++ {
-			if accounts[i].Number == sourceAccount{
+			if accounts[i].Number == sourceAccount {
 				index = i
 			}
 		}
 		if index == -1 {
-            AddFlash(r, w, "eThis shouldn't even be possible. How??")
+			AddFlash(r, w, "eThis shouldn't even be possible. How??")
 			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
 		}
 		currb := accounts[index].Balance
-		if (currb < amount){
-            AddFlash(r, w, "eBalance too low to transfer this amount.")
+		if currb < amount {
+			AddFlash(r, w, "eBalance too low to transfer this amount.")
 			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
 		}
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Query to get the customer ID for the primary customer email
+			err := checkStatus(conn, sourceAccount)
+			if err != nil {
+				return fmt.Errorf("Account failure: %v", err)
+			}
+			err = checkStatus(conn, destinationAccount)
+			if err != nil {
+				return fmt.Errorf("Account failure: %v", err)
+			}
 			var dbal float64
 			var tmp float64
-			err := conn.QueryRow(
+			err = conn.QueryRow(
 				context.Background(),
 				`SELECT balance FROM accounts WHERE account_num = $1`,
 				destinationAccount,
@@ -478,14 +495,14 @@ func transfer(w http.ResponseWriter, r *http.Request){
 				) VALUES (
 					$1, $2, $3, $4, CURRENT_TIMESTAMP
 				) RETURNING transaction_id`,
-				sourceAccount, destinationAccount, amount, "deposit", 
+				sourceAccount, destinationAccount, amount, "deposit",
 			).Scan(&tmp)
 			if err != nil {
 				return fmt.Errorf("Bad Insert into Transactions: %v", err)
 			}
 			return nil
 		})
-		if err != nil{
+		if err != nil {
 			AddFlash(r, w, "e"+err.Error())
 		} else {
 			AddFlash(r, w, "sTransfer Success")
@@ -496,16 +513,22 @@ func transfer(w http.ResponseWriter, r *http.Request){
 }
 
 func transactionHistory(w http.ResponseWriter, r *http.Request) {
-	attemptSession, err := store.Get(r, "login-attempt-session")
-	handle(err)
-	val, ok := attemptSession.Values["data"]
-	if !ok {
-		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-user", http.StatusSeeOther)
 		return
 	}
+	if profileType != "customer" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
 	// Valid sign-in session
-	cookie := val.(*LogInAttemptCookie)
-	email := cookie.Email
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, _ := session.Values["logged-in"]
+	email := val.(*LogInSessionCookie).Email
+
 	var accounts []struct {
 		Number   string        `json:"Number"`
 		Outgoing []transaction `json:"Outgoing"`
@@ -727,7 +750,6 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	attemptSession.Options.MaxAge = 30 * 60 // 30 minutes
 	err = attemptSession.Save(r, w)
 	handle(err)
-
 	redirect_uri := fmt.Sprintf("/twofa")
 	http.Redirect(w, r, redirect_uri, http.StatusSeeOther)
 }
@@ -807,7 +829,6 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	// Mark as logged in
 	session, err := store.Get(r, "current-session")
 	handle(err)
-
 	session.Values["logged-in"] = &LogInSessionCookie{
 		LoggedIn:     false,
 		Email:        "",
@@ -817,7 +838,6 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	}
 	err = session.Save(r, w)
 	handle(err)
-
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -834,6 +854,63 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 	}
+}
+
+func changeStatus(w http.ResponseWriter, r *http.Request) {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
+		return
+	}
+	if profileType != "employee" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "Unable to parse form data", http.StatusBadRequest)
+			return
+		}
+
+		// Extract the data from the form
+		account_num := r.FormValue("accnum")
+		targetstatus := r.FormValue("targetstatus")
+		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			var tmp string
+			if targetstatus == "CLOSED" {
+				var bal float64
+				err = conn.QueryRow(
+					context.Background(),
+					`SELECT balance FROM accounts WHERE account_num = $1`,
+					account_num,
+				).Scan(&bal)
+				if bal >= 0.01 {
+					return fmt.Errorf("Balance too high to close account.")
+				}
+			}
+			err = conn.QueryRow(
+				context.Background(),
+				`UPDATE accounts SET account_status = $1 WHERE account_num = $2 RETURNING account_status`,
+				targetstatus, account_num,
+			).Scan(&tmp)
+			if err != nil {
+				return fmt.Errorf("Bad Update: %v", err)
+			}
+			return nil
+		})
+		if err != nil {
+			AddFlash(r, w, "e"+err.Error())
+			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+			return
+		} else {
+			AddFlash(r, w, fmt.Sprintf("sAccount %s Status changed to %s", account_num, targetstatus))
+			http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
+			return
+		}
+	}
+	RenderTemplate(w, "freezeaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
@@ -1046,9 +1123,10 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 						account_num,
 						primary_customer_id,
 						account_type,
-						balance
+						balance,
+						account_status
 					) VALUES (
-						$1, $2, $3, $4
+						$1, $2, $3, $4, 'OPEN'
 					)`
 				log.Println("secondaryCustomerID is", secondaryCustomerID)
 				// Execute the query
@@ -1079,9 +1157,10 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 						primary_customer_id,
 						secondary_customer_id,
 						account_type,
-						balance
+						balance,
+						account_status
 					) VALUES (
-						$1, $2, $3, $4, $5
+						$1, $2, $3, $4, $5, 'OPEN'
 					)`
 				log.Println("secondaryCustomerID is", secondaryCustomerID)
 				// Execute the query
@@ -1147,7 +1226,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 		rows, _ := conn.Query(
 			context.Background(),
-			"SELECT account_num, primary_customer_id, secondary_customer_id, account_type, balance FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1",
+			"SELECT account_num, primary_customer_id, secondary_customer_id, account_type, balance, account_status FROM accounts WHERE primary_customer_id = $1 OR secondary_customer_id = $1",
 			customerID,
 		)
 		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Account])
@@ -1159,7 +1238,6 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 		return nil
 	})
-
 	if err != nil {
 		AddFlash(r, w, "eNo matching email.")
 		http.Error(w, "No matching email", http.StatusNotFound)
@@ -1172,6 +1250,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 		SecondaryCustomerID int32   `json:"secondaryCustomerId"`
 		AccountType         string  `json:"accountType"`
 		Balance             float64 `json:"balance"`
+		AccountStatus       string  `json:"accountStatus"`
 	}
 
 	jsonData := make([]JSONAccount, len(accountData))
@@ -1190,6 +1269,9 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 		}
 		if item.Balance.Status == pgtype.Present {
 			jsonData[i].Balance = float64(item.Balance.Int.Int64()) * math.Pow(10, float64(item.Balance.Exp))
+		}
+		if item.AccountStatus.Status == pgtype.Present {
+			jsonData[i].AccountStatus = item.AccountStatus.String
 		}
 	}
 
@@ -1241,7 +1323,11 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Create the transaction and update the account balance
 		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-			_, err := conn.Exec(
+			err = checkStatus(conn, recipient)
+			if err != nil {
+				return fmt.Errorf("Account failure: %v", err)
+			}
+			_, err = conn.Exec(
 				context.Background(),
 				fmt.Sprintf(
 					`DO
