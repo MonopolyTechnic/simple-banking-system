@@ -28,6 +28,7 @@ var (
 	host        string
 	port        string
 	env         map[string]string     = readEnv(".env")
+	config      map[string]string     = readEnv("config.env")
 	store       *sessions.CookieStore = sessions.NewCookieStore([]byte("your-secret-key")) // Change this to a secure key
 	smsGateways map[string]string     = map[string]string{
 		"AT&T":               "txt.att.net",
@@ -710,7 +711,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
 		rows, _ := conn.Query(
 			context.Background(),
-			"SELECT profile_type, password_hash, phone_number, phone_carrier, masked_password FROM profiles WHERE email = $1 AND profile_type = $2",
+			"SELECT first_name, profile_type, password_hash, phone_number, phone_carrier, masked_password FROM profiles WHERE email = $1 AND profile_type = $2",
 			r.FormValue("email"),
 			r.URL.Query().Get("profile_type"),
 		)
@@ -744,6 +745,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	handle(err)
 	attemptSession.Values["data"] = &LogInAttemptCookie{
 		Email:          r.FormValue("email"),
+		FirstName:      res[0].FirstName.String,
 		ProfileType:    res[0].ProfileType.String,
 		PhoneNumber:    res[0].PhoneNumber.String,
 		PhoneCarrier:   res[0].PhoneCarrier.String,
@@ -785,7 +787,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			// log.Println(actualCode)
+			log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -834,6 +836,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	session.Values["logged-in"] = &LogInSessionCookie{
 		LoggedIn:     false,
 		Email:        "",
+		FirstName:    "",
 		ProfileType:  "",
 		PhoneNumber:  "",
 		PhoneCarrier: "",
@@ -851,8 +854,14 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if profileType == "employee" {
-		// TODO: Pass in the correct name that is stored in cookies
-		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
+		session, err := store.Get(r, "current-session")
+		handle(err)
+		val, _ := session.Values["logged-in"]
+		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{
+			"fname":    val.(*LogInSessionCookie).FirstName,
+			"bankname": config["BANK_NAME"],
+			"flashes":  RetrieveFlashes(r, w),
+		})
 	} else {
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 	}
@@ -1515,21 +1524,16 @@ func postRecoveredEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func settings(w http.ResponseWriter, r *http.Request) {
+	_, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
 	// Retrieve session data
-
 	session, err := store.Get(r, "current-session")
-	if err != nil {
-		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
-		return
-	}
-
-	// Check if the user is logged in
-	val, ok := session.Values["logged-in"]
-	if !ok || !val.(*LogInSessionCookie).LoggedIn {
-		http.Error(w, "Unauthorized access", http.StatusUnauthorized)
-		return
-	}
-
+	handle(err)
+	val, _ := session.Values["logged-in"]
 	// Extract email and masked password directly
 	userEmail := val.(*LogInSessionCookie).Email
 	maskedPassword := val.(*LogInSessionCookie).MaskedPassword
@@ -1551,5 +1555,13 @@ func settings(w http.ResponseWriter, r *http.Request) {
 
 	recentLogin := time.Now().Format("2006-01-02 15:04:05")
 
-	RenderTemplate(w, "settings.html", pongo2.Context{"profileType": profileType, "fname": firstName, "recentLogin": recentLogin, "email": userEmail, "phoneNumber": phoneNumber, "maskedPassword": maskedPassword})
+	RenderTemplate(w, "settings.html", pongo2.Context{
+		"profileType":    profileType,
+		"fname":          firstName,
+		"recentLogin":    recentLogin,
+		"email":          userEmail,
+		"phoneNumber":    phoneNumber,
+		"maskedPassword": maskedPassword,
+		"bankname":       config["BANK_NAME"],
+	})
 }

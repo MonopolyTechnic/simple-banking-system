@@ -362,6 +362,7 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 type LogInSessionCookie struct {
 	LoggedIn       bool
 	Email          string
+	FirstName      string
 	ProfileType    string
 	PhoneNumber    string
 	PhoneCarrier   string
@@ -371,6 +372,7 @@ type LogInSessionCookie struct {
 // All information relating to the current login attempt
 type LogInAttemptCookie struct {
 	Email          string
+	FirstName      string
 	ProfileType    string
 	PhoneNumber    string
 	PhoneCarrier   string
@@ -385,6 +387,7 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAtt
 	session.Values["logged-in"] = &LogInSessionCookie{
 		LoggedIn:       true,
 		Email:          attemptCookie.Email,
+		FirstName:      attemptCookie.FirstName,
 		ProfileType:    attemptCookie.ProfileType,
 		PhoneNumber:    attemptCookie.PhoneNumber,
 		PhoneCarrier:   attemptCookie.PhoneCarrier,
