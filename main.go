@@ -361,13 +361,22 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func transfer(w http.ResponseWriter, r *http.Request) {
-	attemptSession, err := store.Get(r, "login-attempt-session")
-	handle(err)
-	val, ok := attemptSession.Values["data"]
-	if !ok {
-		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-user", http.StatusSeeOther)
 		return
 	}
+	if profileType != "customer" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
+	// Valid sign-in session
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, _ := session.Values["logged-in"]
+	email := val.(*LogInSessionCookie).Email
+
 	var accounts []struct {
 		Number  string  `json:"Number"`
 		Balance float64 `json:"Balance"`
@@ -504,16 +513,22 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 }
 
 func transactionHistory(w http.ResponseWriter, r *http.Request) {
-	attemptSession, err := store.Get(r, "login-attempt-session")
-	handle(err)
-	val, ok := attemptSession.Values["data"]
-	if !ok {
-		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-user", http.StatusSeeOther)
 		return
 	}
+	if profileType != "customer" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
 	// Valid sign-in session
-	cookie := val.(*LogInAttemptCookie)
-	email := cookie.Email
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, _ := session.Values["logged-in"]
+	email := val.(*LogInSessionCookie).Email
+
 	var accounts []struct {
 		Number   string        `json:"Number"`
 		Outgoing []transaction `json:"Outgoing"`
@@ -842,13 +857,16 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func changeStatus(w http.ResponseWriter, r *http.Request) {
-	attemptSession, err := store.Get(r, "login-attempt-session")
-	handle(err)
-	_, ok := attemptSession.Values["data"]
-	if !ok {
-		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-employee", http.StatusSeeOther)
 		return
 	}
+	if profileType != "employee" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		err := r.ParseForm()
 		if err != nil {
