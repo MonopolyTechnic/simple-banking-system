@@ -152,7 +152,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, "index.html")
+	RenderTemplate(w, "index.html", pongo2.Context{"logo": config["LOGO"]})
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
