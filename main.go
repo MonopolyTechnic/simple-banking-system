@@ -372,8 +372,6 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 		Number  string  `json:"Number"`
 		Balance float64 `json:"Balance"`
 	}
-	cookie := val.(*LogInAttemptCookie)
-	email := cookie.Email
 	var name string
 	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
 		// Query to get the customer ID for the primary customer email
@@ -423,7 +421,7 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 		amountStr := r.FormValue("amount")
 		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil {
-			AddFlash(r, w, err.Error())
+			AddFlash(r, w, "e"+err.Error())
 			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
 		}
 		index := -1
@@ -749,6 +747,9 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		if r.URL.Query().Get("retry") != "true" {
+			if r.URL.Query().Get("resend") == "true" {
+				AddFlash(r, w, "sA new code has been sent to your phone. Please enter the new code.")
+			}
 			attemptSession, err := store.Get(r, "login-attempt-session")
 			handle(err)
 			val, ok := attemptSession.Values["data"]
@@ -867,7 +868,7 @@ func changeStatus(w http.ResponseWriter, r *http.Request) {
 					`SELECT balance FROM accounts WHERE account_num = $1`,
 					account_num,
 				).Scan(&bal)
-				if (bal >= 0.01) {
+				if bal >= 0.01 {
 					return fmt.Errorf("Balance too high to close account.")
 				}
 			}
