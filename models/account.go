@@ -11,4 +11,5 @@ type Account struct {
 	SecondaryCustomerID pgtype.Int4 `db:"secondary_customer_id"`
 	AccountType         pgtype.Text `db:"account_type"`
 	Balance             pgtype.Numeric
+	AccountStatus       pgtype.Text
 }

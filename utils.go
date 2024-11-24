@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -11,6 +13,8 @@ import (
 	"net/http"
 	"net/smtp"
 	"regexp"
+	"strings"
+	"time"
 
 	"github.com/flosch/pongo2/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,6 +26,18 @@ func readEnv(filepath string) map[string]string {
 	env, err := godotenv.Read(filepath)
 	handle(err)
 	return env
+}
+
+func capitalizeFilter(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
+	// Ensure the value is a string
+	if str, ok := value.Interface().(string); ok {
+		// Capitalize the first letter and return the value
+		if len(str) > 0 {
+			return pongo2.AsValue(strings.ToUpper(string(str[0])) + str[1:]), nil
+		}
+	}
+	// If it's not a string, return it as is
+	return pongo2.AsValue(value.Interface()), nil
 }
 
 func formatBalance(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
@@ -85,7 +101,6 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 func AddFlash(r *http.Request, w http.ResponseWriter, msg string) {
 	flashSession, err2 := store.Get(r, "flash-session")
 	handle(err2)
-
 	flashSession.AddFlash(msg)
 	err2 = flashSession.Save(r, w)
 	handle(err2)
@@ -134,6 +149,36 @@ func getFlashMessage(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *
 	handle(errors.New("Flash message is not of the correct format , message should be a string"))
 	log.Println("should never print this utils.getFlashMessage")
 	return pongo2.AsValue("will never reach here"), nil
+}
+
+func generateResetToken() string {
+	// Generate a random token (you could use a stronger method, like UUID or a hash)
+	rand.Seed(time.Now().UnixNano())
+	const tokenLength = 32
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	var token []byte
+	for i := 0; i < tokenLength; i++ {
+		token = append(token, charset[rand.Intn(len(charset))])
+	}
+	return string(token)
+}
+
+// Returns email, true if the token is valid, otherwise returns "", false
+func isValidToken(w http.ResponseWriter, r *http.Request, token string) (string, bool) {
+	// Check if the token exists
+	session, err := store.Get(r, "reset-password-session")
+	if err != nil {
+		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
+		return "", false
+	}
+	val, exists := session.Values[token]
+	var email string
+	if val != nil {
+		email = val.(string)
+	} else {
+		email = ""
+	}
+	return email, exists
 }
 
 func SendEmail(endemail string, subject string, body string) error {
@@ -193,6 +238,25 @@ func SendEmail(endemail string, subject string, body string) error {
 	c.Quit()
 	return nil
 
+}
+
+func checkStatus(conn *pgxpool.Pool, account_num string) error {
+	var frozen sql.NullString
+	err := conn.QueryRow(
+		context.Background(),
+		`SELECT account_status FROM accounts WHERE account_num = $1`,
+		account_num,
+	).Scan(&frozen)
+	if err != nil {
+		return err
+	}
+	if !(frozen.Valid) {
+		return fmt.Errorf("account %s status unavailable", account_num)
+	}
+	if frozen.String != "OPEN" {
+		return fmt.Errorf("account %s %s", account_num, frozen.String)
+	}
+	return nil
 }
 
 // Helper function to send a verification code to a phone number given the carrier
@@ -309,6 +373,55 @@ type LogInAttemptCookie struct {
 	ProfileType  string
 	PhoneNumber  string
 	PhoneCarrier string
+}
+
+// SetLoggedIn is a helper function to set the login cookies
+func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAttemptCookie) {
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
+	session.Values["logged-in"] = &LogInSessionCookie{
+		LoggedIn:     true,
+		Email:        attemptCookie.Email,
+		ProfileType:  attemptCookie.ProfileType,
+		PhoneNumber:  attemptCookie.PhoneNumber,
+		PhoneCarrier: attemptCookie.PhoneCarrier,
+	}
+	err = session.Save(r, w)
+	handle(err)
+}
+
+// Returns the type of profile logged in along with a boolean indicating if the user is logged in or not
+func checkLoggedIn(r *http.Request, w http.ResponseWriter) (string, bool) {
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, ok := session.Values["logged-in"]
+	loggedIn := false
+	if ok {
+		loggedIn = val.(*LogInSessionCookie).LoggedIn
+	}
+	if loggedIn {
+		return val.(*LogInSessionCookie).ProfileType, loggedIn
+	}
+	return "", loggedIn
+}
+
+type transaction struct {
+	Name   string    `json:"Name"`
+	Type   string    `json:"Type"`
+	Amount float64   `json:"Amount"`
+	Date   time.Time `json:"Date"`
+}
+
+func (t *transaction) MarshalJSON() ([]byte, error) {
+	type Alias transaction // Create an alias to avoid recursion
+	return json.Marshal(&struct {
+		Date string `json:"Date"` // Format the Date field as a string
+		*Alias
+	}{
+		Date:  t.Date.Format(time.RFC3339), // ISO 8601 format
+		Alias: (*Alias)(t),
+	})
 }
 
 // Helper func to handle errors
