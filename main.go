@@ -787,7 +787,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			log.Println(actualCode)
+			// log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}

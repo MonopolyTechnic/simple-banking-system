@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/smtp"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -90,10 +91,33 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 		}
 	}
 
+	RenderStyles()
 	err = tpl.ExecuteWriter(context, w)
 	if err != nil {
 		log.Println("Error rendering template:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
+func RenderStyles() {
+	files, err := os.ReadDir("./static")
+	handle(err)
+
+	err = os.MkdirAll("./static/rendered", os.ModePerm)
+	handle(err)
+
+	for _, f := range files {
+		if !f.IsDir() {
+			content, err := os.ReadFile("./static/" + f.Name())
+			handle(err)
+
+			renderedStyle := string(content)
+			renderedStyle = strings.Replace(string(content), "{{ banner }}", config["BANNER"], -1)
+			renderedStyle = strings.Replace(renderedStyle, "{{ primary_hex }}", config["PRIMARY_HEX"], -1)
+
+			err = os.WriteFile("./static/rendered/"+f.Name(), []byte(renderedStyle), os.ModePerm)
+			handle(err)
+		}
 	}
 }
 

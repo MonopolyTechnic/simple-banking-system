@@ -27,7 +27,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 10px 20px;
-    background-image: url('/static/images/clouds.jpg');
+    background-image: url('{{ banner }}');
     background-size: 100%; 
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
