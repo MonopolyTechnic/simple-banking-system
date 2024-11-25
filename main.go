@@ -131,6 +131,7 @@ func main() {
 	http.HandleFunc("/user-dashboard", userDashboard)
 	http.HandleFunc("/transaction-history", transactionHistory)
 	http.HandleFunc("/transfer", transfer)
+	http.HandleFunc("/notifications", notifications)
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
@@ -358,7 +359,67 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
-func transfer(w http.ResponseWriter, r *http.Request){
+func notifications(w http.ResponseWriter, r *http.Request) {
+	attemptSession, err := store.Get(r, "login-attempt-session")
+	handle(err)
+	val, ok := attemptSession.Values["data"]
+	if !ok {
+		http.Redirect(w, r, "/logout", http.StatusSeeOther)
+		return
+	}
+	cookie := val.(*LogInAttemptCookie)
+	email := cookie.Email
+	var messages []struct {
+		Title   string    `json:"Title"`
+		Content string    `json:"Content"`
+		Sent    time.Time `json:"Sent"`
+		Seen    bool      `json:"Seen"`
+	}
+	var name string
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		// Query to get the customer ID for the primary customer email
+		var id int
+		err := conn.QueryRow(
+			context.Background(),
+			`SELECT first_name, id FROM profiles WHERE email = $1`,
+			email,
+		).Scan(&name, &id)
+		if err != nil {
+			return fmt.Errorf("Invalid email: %s", email)
+		}
+		rows, err := conn.Query(
+			context.Background(),
+			`SELECT title, content, sent_timestamp, seen FROM notifications WHERE target_userid = $1 ORDER BY sent_timestamp DESC`,
+			id,
+		)
+		if err != nil {
+			return fmt.Errorf("Invalid return from accounts: %s", email)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var message struct {
+				Title   string    `json:"Title"`
+				Content string    `json:"Content"`
+				Sent    time.Time `json:"Sent"`
+				Seen    bool      `json:"Seen"`
+			}
+			if err := rows.Scan(&message.Title, &message.Content, &message.Sent, &message.Seen); err != nil {
+				return fmt.Errorf("Error scanning notification row: %v", err)
+			}
+			messages = append(messages, message)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("Error while iterating over notification rows: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		AddFlash(r, w, "e"+err.Error())
+	}
+	RenderTemplate(w, "notifications.html", pongo2.Context{"notifications": messages, "flashes": RetrieveFlashes(r, w), "fname": name})
+}
+
+func transfer(w http.ResponseWriter, r *http.Request) {
 	attemptSession, err := store.Get(r, "login-attempt-session")
 	handle(err)
 	val, ok := attemptSession.Values["data"]
