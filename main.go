@@ -475,8 +475,10 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		AddFlash(r, w, "e"+err.Error())
 	}
-	if (r.Method == http.MethodPost){
-
+		var userA int
+		var userB sql.NullInt64
+		var userC int
+		var userD sql.NullInt64
 		sourceAccount := r.FormValue("sourceAccount")
         destinationAccount := r.FormValue("destinationAccount")
         amountStr := r.FormValue("amount")
@@ -506,11 +508,19 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 			var tmp float64
 			err := conn.QueryRow(
 				context.Background(),
-				`SELECT balance FROM accounts WHERE account_num = $1`,
+				`SELECT balance, primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
 				destinationAccount,
-			).Scan(&dbal)
+			).Scan(&dbal, &userC, &userD)
 			if err != nil {
 				return fmt.Errorf("Destination Account does not exist.")
+			}
+			err = conn.QueryRow(
+				context.Background(),
+				`SELECT primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
+				sourceAccount,
+			).Scan(&userA, &userB)
+			if err != nil {
+				return fmt.Errorf("Source Account does not exist.")
 			}
 			err = conn.QueryRow(
 				context.Background(),
@@ -550,6 +560,16 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 			AddFlash(r, w, "e"+err.Error())
 		} else {
 			AddFlash(r, w, "sTransfer Success")
+			msg1 := fmt.Sprintf("Sent transfer of $%.2f to account #%s from #%s", amount, destinationAccount, sourceAccount)
+			msg2 := fmt.Sprintf("Received transfer of $%.2f from account #%s to #%s", amount, sourceAccount, destinationAccount)
+			sendNotification(userA, "Transfer", msg1)
+			if userB.Valid {
+				sendNotification(int(userB.Int64), "Transfer", msg1)
+			}
+			sendNotification(userC, "Transfer", msg2)
+			if userD.Valid {
+				sendNotification(int(userD.Int64), "Transfer", msg2)
+			}
 		}
 		http.Redirect(w, r, "/transfer", http.StatusSeeOther)
 	}
