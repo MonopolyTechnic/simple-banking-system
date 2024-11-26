@@ -22,7 +22,7 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    padding-top: 50px; /* Adds space at the top to push content downward */
+    padding-top: 15px; /* Adds space at the top to push content downward */
 }
 
 .centertextleft {
@@ -86,6 +86,26 @@ input[type="submit"] {
     width: 220px;
     height: 45px; /* Consistent height with input fields */
     border-radius: 10px;
+    margin-bottom: 5px;
+}
+
+/* cancel button styles */
+.cancel-button {
+    background-color: #c07171;
+    color: white;
+    border: 2px solid #e7e7e7;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 10px;
+    width: 220px;
+    height: 45px; /* Consistent height with input fields */
+    border-radius: 10px;
+    margin-top: 0px;
+}
+
+/* cancel button styles */
+.cancel-button:hover {
+    background-color: #af6363;
 }
 
 input[type="submit"]:hover {
