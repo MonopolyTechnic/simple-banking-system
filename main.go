@@ -793,7 +793,7 @@ func transactionHistory(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		AddFlash(r, w, err.Error())
+		AddFlash(r, w, "e"+err.Error())
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 		return
 	}
