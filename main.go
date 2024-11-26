@@ -1319,10 +1319,21 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Extract transaction amount
 		amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
 
+		var userA int
+		var userB sql.NullInt64
+
 		// Create the transaction and update the account balance
 		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
-			_, err := conn.Exec(
+			err := conn.QueryRow(
+				context.Background(),
+				`SELECT primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
+				recipient,
+			).Scan(&userA, &userB)
+			if err != nil {
+				return fmt.Errorf("Failed to retrieve recipient account: %v", err)
+			}
+			_, err = conn.Exec(
 				context.Background(),
 				fmt.Sprintf(
 					`DO
@@ -1387,6 +1398,19 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 
 		// Flash message after successful insertion
 		AddFlash(r, w, fmt.Sprintf("s%s of $%.2f completed successfully!", strings.Title(transactionType), amount))
+
+		// Send notification to each user
+		msg := "Error"
+		if transactionType == "deposit" {
+			msg = fmt.Sprintf("Deposit of $%.2f to account #%s", amount, recipient)
+		}
+		if transactionType == "withdraw" {
+			msg = fmt.Sprintf("Withdrawal of $%.2f from account #%s", amount, recipient)
+		}
+		sendNotification(userA, "Transaction", msg)
+		if userB.Valid {
+			sendNotification(int(userB.Int64), "Transaction", msg)
+		}
 
 		// Respond with a success message
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
