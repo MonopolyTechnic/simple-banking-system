@@ -154,7 +154,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, "index.html", pongo2.Context{"logo": config["LOGO"]})
+	RenderTemplate(w, "index.html", pongo2.Context{"logo": config["LOGO"], "bankname": config["BANK_NAME"]})
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +168,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, "loginuser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "loginuser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func loginEmployee(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +182,7 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +215,7 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 		// For example, you can redirect the user or render a confirmation page
 		http.Redirect(w, r, "/postresetpassword", http.StatusSeeOther)
 	}
-	RenderTemplate(w, "forgotpassword.html")
+	RenderTemplate(w, "forgotpassword.html", pongo2.Context{"bankname": config["BANK_NAME"]})
 }
 
 func resetPassword(w http.ResponseWriter, r *http.Request) {
@@ -284,11 +284,15 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Render the form with the token
-	RenderTemplate(w, "resetpassword.html", pongo2.Context{"Token": token, "flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "resetpassword.html", pongo2.Context{
+		"Token":    token,
+		"flashes":  RetrieveFlashes(r, w),
+		"bankname": config["BANK_NAME"],
+	})
 }
 
 func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "postresetpassword.html")
+	RenderTemplate(w, "postresetpassword.html", pongo2.Context{"bankname": config["BANK_NAME"]})
 }
 
 func userDashboard(w http.ResponseWriter, r *http.Request) {
@@ -361,7 +365,12 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//log.Printf("accounts: %+v", accounts)
-	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{
+		"acclist":  accounts,
+		"flashes":  RetrieveFlashes(r, w),
+		"fname":    name,
+		"bankname": config["BANK_NAME"],
+	})
 }
 
 func transfer(w http.ResponseWriter, r *http.Request) {
@@ -513,7 +522,12 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, "/transfer", http.StatusSeeOther)
 	}
-	RenderTemplate(w, "transfer.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+	RenderTemplate(w, "transfer.html", pongo2.Context{
+		"acclist":  accounts,
+		"flashes":  RetrieveFlashes(r, w),
+		"fname":    name,
+		"bankname": config["BANK_NAME"],
+	})
 }
 
 func transactionHistory(w http.ResponseWriter, r *http.Request) {
@@ -696,7 +710,13 @@ func transactionHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	acclistJSONString := string(acclistJSON)
 	//log.Printf("accountsJSONString: %s", acclistJSONString)
-	RenderTemplate(w, "transaction_history.html", pongo2.Context{"acclistJSON": acclistJSONString, "acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+	RenderTemplate(w, "transaction_history.html", pongo2.Context{
+		"acclistJSON": acclistJSONString,
+		"acclist":     accounts,
+		"flashes":     RetrieveFlashes(r, w),
+		"fname":       name,
+		"bankname":    config["BANK_NAME"],
+	})
 }
 
 // Callback endpoint for login requests
@@ -794,7 +814,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 			handle(err)
 		}
 
-		RenderTemplate(w, "2fa.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+		RenderTemplate(w, "2fa.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 	} else if r.Method == http.MethodPost {
 		code := r.FormValue("code")
 		actualCode, ok := twofaSession.Values["actualCode"]
@@ -923,7 +943,7 @@ func changeStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	RenderTemplate(w, "freezeaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "freezeaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
@@ -1036,7 +1056,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 	// Quality of life improvement would be to somehow persist the form data for a retry
 	// Render the add user form (in case of GET request or on error)
-	RenderTemplate(w, "adduser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "adduser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func openAccount(w http.ResponseWriter, r *http.Request) {
@@ -1215,7 +1235,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		return
 	}
-	RenderTemplate(w, "openaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "openaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func listAccounts(w http.ResponseWriter, r *http.Request) {
@@ -1419,7 +1439,7 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 
 	// Quality of life improvement would be to somehow persist the form data for a retry
 	// Render the make transaction form (in case of GET request or on error)
-	RenderTemplate(w, "depositwithdraw.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "depositwithdraw.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
@@ -1463,7 +1483,7 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
 }
 
 func forgotEmail(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "forgotemail.html")
+	RenderTemplate(w, "forgotemail.html", pongo2.Context{"bankname": config["BANK_NAME"]})
 }
 
 func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
@@ -1490,7 +1510,7 @@ func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
 		// Handle case where no rows are found
 		if err != nil {
 			AddFlash(r, w, "eInformation not linked to an existing account.")
-			RenderTemplate(w, "forgotemail.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+			RenderTemplate(w, "forgotemail.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 			return nil
 		}
 
@@ -1510,7 +1530,7 @@ func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
 		log.Println("Masked email:", maskedEmail)
 
 		// Render template with masked email
-		RenderTemplate(w, "verifyemailtorecover.html", pongo2.Context{"MaskedEmail": maskedEmail})
+		RenderTemplate(w, "verifyemailtorecover.html", pongo2.Context{"MaskedEmail": maskedEmail, "bankname": config["BANK_NAME"]})
 
 		return nil
 	})
@@ -1522,7 +1542,7 @@ func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
 }
 
 func postRecoveredEmail(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "postrecoveredemail.html")
+	RenderTemplate(w, "postrecoveredemail.html", pongo2.Context{"bankname": config["BANK_NAME"]})
 }
 
 func settings(w http.ResponseWriter, r *http.Request) {
