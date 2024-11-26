@@ -22,6 +22,9 @@
                 </div>
             {% endif %}
         {% endfor %}
+        {% if numaccounts == 0 %}
+            <h4>No bank accounts are opened under your name.</h3>
+        {% endif %}
     </div>
 
 </body>

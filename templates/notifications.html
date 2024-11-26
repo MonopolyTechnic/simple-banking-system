@@ -18,6 +18,9 @@
                 <p>{{ notification.Content }}</p>
             </div>
         {% endfor %}
+        {% if numnotifications == 0 %}
+            <h4 class="centered-message">You have no new notifications.</h3>
+        {% endif %}
     </div>
 </body>
 </html>

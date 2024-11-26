@@ -367,10 +367,11 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	//log.Printf("accounts: %+v", accounts)
 	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{
-		"acclist":  accounts,
-		"flashes":  RetrieveFlashes(r, w),
-		"fname":    name,
-		"bankname": config["BANK_NAME"],
+		"acclist":     accounts,
+		"numaccounts": len(accounts),
+		"flashes":     RetrieveFlashes(r, w),
+		"fname":       name,
+		"bankname":    config["BANK_NAME"],
 	})
 }
 
@@ -438,7 +439,12 @@ func notifications(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		AddFlash(r, w, "e"+err.Error())
 	}
-	RenderTemplate(w, "notifications.html", pongo2.Context{"notifications": messages, "flashes": RetrieveFlashes(r, w), "fname": name})
+	RenderTemplate(w, "notifications.html", pongo2.Context{
+		"notifications":    messages,
+		"numnotifications": len(messages),
+		"flashes":          RetrieveFlashes(r, w),
+		"fname":            name,
+	})
 }
 
 func transfer(w http.ResponseWriter, r *http.Request) {
