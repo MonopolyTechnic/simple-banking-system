@@ -9,22 +9,7 @@
 </head>
 
 <body>
-    <!-- Flash Messages -->
-    <div class="flash-messages">
-        {% for flash in flashes %}
-            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
-        {% endfor %}
-    </div>
-    <h1>Welcome, {{fname}}</h1>
-
-    <!-- Navigation Bar -->
-    <div class="nav-bar">
-        <a href="/user-dashboard">Dashboard</a>
-        <a href="/transfer">Transfer</a>
-        <a href="/transaction-history">Transactions</a>
-        <a href="/notifications">Notifications</a>
-        <a href="#">Settings</a>
-    </div>
+    {% include "user_header.html" %}
 
     <div class="notifications">
         {% for notification in notifications %}

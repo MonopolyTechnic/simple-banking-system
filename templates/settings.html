@@ -8,10 +8,13 @@
     <title>{{ bankname }} - Settngs</title>
     {{ global_styles|safe }}
     <link rel="stylesheet" href="/static/settings.css">
+    <link rel="stylesheet" href="/static/userdashboard.css">
     <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
+    <!-- Employee Settings -->
+    {% if profileType == "employee" %}
     <!-- Flash Messages -->
     <div class="flash-messages">
         {% for flash in flashes %}
@@ -22,8 +25,6 @@
         {% endfor %}
     </div>
 
-    <!-- Employee Settings -->
-    {% if profileType == "employee" %}
     <!-- Header Section -->
     <header>
         <div class="top-header">
@@ -95,16 +96,7 @@
 
     <!-- Customer Settings -->
     {% else %}
-    <h1>Welcome, {{fname}}</h1>
-
-    <!-- Navigation Bar -->
-    <div class="nav-bar">
-        <a href="/user-dashboard">Dashboard</a>
-        <a href="#">Transfer</a>
-        <a href="/transaction-history">Transactions</a>
-        <a href="#">Notifications</a>
-        <a href="/settings">Settings</a>
-    </div>
+    {% include "user_header.html" %}
 
     <!-- Main Content -->
     <main class="content-container">

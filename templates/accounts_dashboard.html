@@ -7,50 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {{ global_styles|safe }}
     <link rel="stylesheet" href="/static/userdashboard.css">
-    <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-    <!-- Flash Messages -->
-    <div class="flash-messages">
-        {% for flash in flashes %}
-            <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
-        {% endfor %}
-    </div>
-
-    <!-- Header Section -->
-    <header>
-        <div class="top-header">
-            <div class="header-left">
-                <a href="/user-dashboard" class="icon-link">
-                    <span class="material-icons icon-large">home</span>
-                </a>
-            </div>
-            <div class="header-middle">
-                <h2 class="brand-name">Bank Name</h2>
-            </div>
-            <div class="header-right">
-                <nav>
-                    <ul class="header-nav">
-                        <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
-                        <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
-        <div class="header-bottom">
-            <h1 class="welcome-message">Hello, {{ fname }}!</h1>
-        </div>
-    </header>
-
-    <!-- Navigation Bar -->
-    <div class="nav-bar">
-        <a href="/user-dashboard">Dashboard</a>
-        <a href="/transfer"><span class="material-icons">keyboard_double_arrow_right</span>Transfer</a>
-        <a href="/transaction-history"><span class="material-icons">receipt_long</span>Transactions</a>
-        <a href="/notifications"><span class="material-icons">notifications</span>Notifications</a>
-        <a href="/settings"><span class="material-icons">settings</span>Settings</a>
-    </div>
+    {% include "user_header.html" %}
 
     <div class="accounts-container">
         {% for account in acclist %}

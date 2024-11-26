@@ -8,21 +8,8 @@
     <link rel="stylesheet" href="/static/userdashboard.css"> <!-- Assuming your CSS file is named styles.css -->
 </head>
 <body>
+    {% include "user_header.html" %}
 
-    {% for flash in flashes %}
-        <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
-    {% endfor %}
-    <!-- Header for Transaction History -->
-    <h1>Transaction History</h1>
-
-    <!-- Navigation Bar -->
-    <div class="nav-bar">
-        <a href="/user-dashboard">Dashboard</a>
-        <a href="/transfer">Transfer</a>
-        <a href="/transaction-history">Transactions</a>
-        <a href="/notifications">Notifications</a>
-        <a href="#">Settings</a>
-    </div>
     <!-- Account Dropdown and Transaction Display -->
     <div class="accounts-container">
         <!-- Dropdown to select account -->
