@@ -135,6 +135,8 @@ func main() {
 	http.HandleFunc("/transfer", transfer)
 	http.HandleFunc("/change-status", changeStatus)
 
+	pongo2.Globals.Update(pongo2.Context{"global_styles": GetGlobalStyles()})
+
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
 	pongo2.RegisterFilter("capitalize", capitalizeFilter)

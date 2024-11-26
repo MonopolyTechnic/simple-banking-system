@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="stylesheet" href="/static/rendered/formstyle.css"> <!-- Link to CSS -->
+    {{ global_styles|safe }}
+    <link rel="stylesheet" href="/static/formstyle.css"> <!-- Link to CSS -->
     <title>Deposit/Withdraw Money</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
