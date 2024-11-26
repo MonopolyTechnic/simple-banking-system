@@ -437,3 +437,20 @@ func handle(err error, fmtStr ...string) {
 		log.Fatal(fmt)
 	}
 }
+
+func sendNotification(userID int, title string, content string) {
+	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+		_, err := conn.Exec(
+			context.Background(),
+			`INSERT INTO notifications (target_userid, title, content) VALUES ($1, $2, $3)`,
+			userID, title, content,
+		)
+		if err != nil {
+			return fmt.Errorf("Bad insert into notifications: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		handle(err, "Failed sending notification")
+	}
+}
