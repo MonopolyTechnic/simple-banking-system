@@ -425,6 +425,8 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAtt
 func checkLoggedIn(r *http.Request, w http.ResponseWriter) (string, bool) {
 	session, err := store.Get(r, "current-session")
 	handle(err)
+	// Refresh the session with new activity
+	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
 	val, ok := session.Values["logged-in"]
 	loggedIn := false
 	if ok {
