@@ -20,9 +20,8 @@
     <div class="nav-bar">
         <a href="/user-dashboard">Dashboard</a>
         <a href="/transfer">Transfer</a>
-        <a href="#">Statements</a>
         <a href="/transaction-history">Transactions</a>
-        <a href="#">Notifications</a>
+        <a href="/notifications">Notifications</a>
         <a href="/settings">Settings</a>
     </div>
 
@@ -34,9 +33,6 @@
                     <p>Account Number: {{ account.AccountNum }}</p>
                     <p>Balance: ${{ account.Balance | formatBalance }}</p>
                     <p>{{ account.AccountStatus }}</p>
-                    <div class="button-container">
-                        <button class="button">View Account</button>
-                    </div>
                 </div>
             {% endif %}
         {% endfor %}

@@ -108,7 +108,9 @@
     
         async function submitSearchForm(form) {
             const email = new FormData(form, null).get('email');
-            console.log("email is ", email);
+            const searchPreviewList = document.getElementById('emailSearchList');
+            searchPreviewList.innerHTML = '';
+            searchPreviewList.style.display = 'none';
             const data = await fetch(`/list-accounts?email=${email}`).then(res => res.status === 200 ? res.json() : null).catch(console.error);
             if (data) {
                 document.getElementById('error-flash-messages').innerHTML = '';
