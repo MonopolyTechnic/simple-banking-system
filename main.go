@@ -502,7 +502,7 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 		destinationAccount := r.FormValue("destinationAccount")
 		amountStr := r.FormValue("amount")
 		amount, err := strconv.ParseFloat(amountStr, 64)
-		if(sourceAccount == destinationAccount){
+		if sourceAccount == destinationAccount {
 			AddFlash(r, w, "eCannot transfer to the same account.")
 			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
 			return //return to avoid actually doing the transfer
@@ -880,7 +880,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			log.Println(actualCode)
+			// log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
