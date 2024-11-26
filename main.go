@@ -430,6 +430,11 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 		destinationAccount := r.FormValue("destinationAccount")
 		amountStr := r.FormValue("amount")
 		amount, err := strconv.ParseFloat(amountStr, 64)
+		if(sourceAccount == destinationAccount){
+			AddFlash(r, w, "eCannot transfer to the same account.")
+			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
+			return //return to avoid actually doing the transfer
+		}
 		if err != nil {
 			AddFlash(r, w, "e"+err.Error())
 			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
