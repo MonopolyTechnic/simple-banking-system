@@ -24,7 +24,7 @@
     <header>
         <div class="top-header">
             <div class="header-left">
-                <a href="#home" class="icon-link">
+                <a href="/employee-dashboard" class="icon-link">
                     <span class="material-icons icon-large">home</span>
                 </a>
             </div>
@@ -35,7 +35,7 @@
                 <nav>
                     <ul class="header-nav">
                         <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
-                        <li><a href="#settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
+                        <li><a href="/settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
                         <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
                     </ul>
                 </nav>
@@ -61,6 +61,9 @@
                 </form>
                 <form action="/make-transaction" method="GET">
                     <button type="submit" class="btn btn-primary">Deposit/Withdraw</button>
+                </form>
+                <form action="/change-status" method="GET">
+                    <button type="submit" class="btn btn-primary">Change Account Status</button>
                 </form>
             </div>
         </section>
@@ -90,6 +93,7 @@
                         <th>Primary Holder ID</th>
                         <th>Secondary Holder ID</th>
                         <th>Type</th>
+                        <th>Account Status</th>
                         <th>Balance</th>
                     </thead>
                     <tbody>
@@ -111,11 +115,13 @@
                 tbody.innerHTML = '';
                 for (const item of data) {
                     const row = tbody.insertRow(-1);
+                    console.log(item);
                     row.insertCell(0).innerText = item.accountNum;
                     row.insertCell(1).innerText = item.primaryCustomerId;
                     row.insertCell(2).innerText = item.secondaryCustomerId;
                     row.insertCell(3).innerText = item.accountType;
-                    row.insertCell(4).innerText = item.balance.toFixed(2);
+                    row.insertCell(4).innerText = item.accountStatus;
+                    row.insertCell(5).innerText = item.balance.toFixed(2);
                 }
             }
             else{

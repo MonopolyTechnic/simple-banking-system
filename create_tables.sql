@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS profiles(
                         NOT NULL
     ,password_hash      BYTEA
                         NOT NULL
+    ,masked_password    VARCHAR(32)
+                        NOT NULL
 );
 CREATE TABLE IF NOT EXISTS accounts(
     account_num             CHAR(16)
@@ -48,6 +50,9 @@ CREATE TABLE IF NOT EXISTS accounts(
     ,balance                NUMERIC(15, 2)  -- 15 digits, with 2 of those being after the decimal
                             NOT NULL
                             CHECK (balance >= 0)
+    ,account_status         VARCHAR(16)
+                            NOT NULL
+                            DEFAULT 'OPEN'
     ,FOREIGN KEY (primary_customer_id)
         REFERENCES profiles(id)
     ,FOREIGN KEY (secondary_customer_id)

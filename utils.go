@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -100,7 +101,6 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 func AddFlash(r *http.Request, w http.ResponseWriter, msg string) {
 	flashSession, err2 := store.Get(r, "flash-session")
 	handle(err2)
-
 	flashSession.AddFlash(msg)
 	err2 = flashSession.Save(r, w)
 	handle(err2)
@@ -240,6 +240,25 @@ func SendEmail(endemail string, subject string, body string) error {
 
 }
 
+func checkStatus(conn *pgxpool.Pool, account_num string) error {
+	var frozen sql.NullString
+	err := conn.QueryRow(
+		context.Background(),
+		`SELECT account_status FROM accounts WHERE account_num = $1`,
+		account_num,
+	).Scan(&frozen)
+	if err != nil {
+		return err
+	}
+	if !(frozen.Valid) {
+		return fmt.Errorf("account %s status unavailable", account_num)
+	}
+	if frozen.String != "OPEN" {
+		return fmt.Errorf("account %s %s", account_num, frozen.String)
+	}
+	return nil
+}
+
 // Helper function to send a verification code to a phone number given the carrier
 func SendCode(phoneNumber, phoneCarrier string) (int, error) {
 	emailSender = env["EMAIL_SENDER"] // Read email sender from environment
@@ -341,19 +360,21 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 
 // Information relating to the current logged in user's session
 type LogInSessionCookie struct {
-	LoggedIn     bool
-	Email        string
-	ProfileType  string
-	PhoneNumber  string
-	PhoneCarrier string
+	LoggedIn       bool
+	Email          string
+	ProfileType    string
+	PhoneNumber    string
+	PhoneCarrier   string
+	MaskedPassword string
 }
 
 // All information relating to the current login attempt
 type LogInAttemptCookie struct {
-	Email        string
-	ProfileType  string
-	PhoneNumber  string
-	PhoneCarrier string
+	Email          string
+	ProfileType    string
+	PhoneNumber    string
+	PhoneCarrier   string
+	MaskedPassword string
 }
 
 // SetLoggedIn is a helper function to set the login cookies
@@ -362,11 +383,12 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAtt
 	handle(err)
 	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
 	session.Values["logged-in"] = &LogInSessionCookie{
-		LoggedIn:     true,
-		Email:        attemptCookie.Email,
-		ProfileType:  attemptCookie.ProfileType,
-		PhoneNumber:  attemptCookie.PhoneNumber,
-		PhoneCarrier: attemptCookie.PhoneCarrier,
+		LoggedIn:       true,
+		Email:          attemptCookie.Email,
+		ProfileType:    attemptCookie.ProfileType,
+		PhoneNumber:    attemptCookie.PhoneNumber,
+		PhoneCarrier:   attemptCookie.PhoneCarrier,
+		MaskedPassword: attemptCookie.MaskedPassword,
 	}
 	err = session.Save(r, w)
 	handle(err)
