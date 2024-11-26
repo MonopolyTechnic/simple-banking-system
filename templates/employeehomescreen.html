@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Monopoly-Technic</title>
+    <title>{{ bankname }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{ global_styles|safe }}
     <link rel="stylesheet" href="/static/style2.css">
     <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -29,7 +30,7 @@
                 </a>
             </div>
             <div class="header-middle">
-                <h2 class="brand-name">Bank Name</h2>
+                <h2 class="brand-name">{{ bankname }}</h2>
             </div>
             <div class="header-right">
                 <nav>

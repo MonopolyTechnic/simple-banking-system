@@ -34,7 +34,7 @@ h1 {
     display: flex;
     justify-content: space-between;
     padding: 10px 20px;
-    background-image: url('/static/images/clouds.jpg');
+    background-image: var(--banner-url);
     background-size: 100%; 
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -79,7 +79,7 @@ h1 {
 
 .nav-bar {
     width: 100%;
-    background-color: #545F71;
+    background-color: var(--primary-hex);
     display: flex;
     justify-content: center;
     padding: 10px 0;

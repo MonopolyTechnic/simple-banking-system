@@ -97,6 +97,17 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 	}
 }
 
+func GetGlobalStyles() string {
+	return fmt.Sprintf(
+		`<style>:root {
+			--banner-url: url("%s");
+			--primary-hex: %s;
+		}</style>`,
+		config["BANNER"],
+		config["PRIMARY_HEX"],
+	)
+}
+
 // Helper function to add a flash message to the flash session
 func AddFlash(r *http.Request, w http.ResponseWriter, msg string) {
 	flashSession, err2 := store.Get(r, "flash-session")
@@ -362,6 +373,7 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 type LogInSessionCookie struct {
 	LoggedIn       bool
 	Email          string
+	FirstName      string
 	ProfileType    string
 	PhoneNumber    string
 	PhoneCarrier   string
@@ -371,6 +383,7 @@ type LogInSessionCookie struct {
 // All information relating to the current login attempt
 type LogInAttemptCookie struct {
 	Email          string
+	FirstName      string
 	ProfileType    string
 	PhoneNumber    string
 	PhoneCarrier   string
@@ -385,6 +398,7 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAtt
 	session.Values["logged-in"] = &LogInSessionCookie{
 		LoggedIn:       true,
 		Email:          attemptCookie.Email,
+		FirstName:      attemptCookie.FirstName,
 		ProfileType:    attemptCookie.ProfileType,
 		PhoneNumber:    attemptCookie.PhoneNumber,
 		PhoneCarrier:   attemptCookie.PhoneCarrier,
@@ -398,6 +412,8 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAtt
 func checkLoggedIn(r *http.Request, w http.ResponseWriter) (string, bool) {
 	session, err := store.Get(r, "current-session")
 	handle(err)
+	// Refresh the session with new activity
+	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
 	val, ok := session.Values["logged-in"]
 	loggedIn := false
 	if ok {
