@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transaction History</title>
+    <title>{{ bankname }} - Transaction History</title>
+    {{ global_styles|safe }}
     <link rel="stylesheet" href="/static/userdashboard.css"> <!-- Assuming your CSS file is named styles.css -->
 </head>
 <body>
@@ -18,9 +19,8 @@
     <div class="nav-bar">
         <a href="/user-dashboard">Dashboard</a>
         <a href="/transfer">Transfer</a>
-        <a href="#">Statements</a>
         <a href="/transaction-history">Transactions</a>
-        <a href="#">Notifications</a>
+        <a href="/notifications">Notifications</a>
         <a href="#">Settings</a>
     </div>
     <!-- Account Dropdown and Transaction Display -->

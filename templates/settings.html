@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ bankname }} - Settngs</title>
+    {{ global_styles|safe }}
+    <link rel="stylesheet" href="/static/settings.css">
+    <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <!-- Flash Messages -->
+    <div class="flash-messages">
+        {% for flash in flashes %}
+            {% set flashClass = flash | getFlashType %}
+            {% if flashClass == 'success' %}
+                <p class="flash flash-{{flash | getFlashType}}">{{flash | getFlashMessage}}</p>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Employee Settings -->
+    {% if profileType == "employee" %}
+    <!-- Header Section -->
+    <header>
+        <div class="top-header">
+            <div class="header-left">
+                <a href="/employee-dashboard" class="icon-link">
+                    <span class="material-icons icon-large">home</span>
+                </a>
+            </div>
+            <div class="header-middle">
+                <h2 class="brand-name">{{ bankname }}</h2>
+            </div>
+            <div class="header-right">
+                <nav>
+                    <ul class="header-nav">
+                        <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
+                        <li><a href="/settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
+                        <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        <div class="header-bottom">
+            <h2 class="welcome-message">Hello, {{ fname }}!</h2>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="content-container">
+        <!-- Header Section -->
+        <section class="user-section">
+            <div class="section-header">
+                <h2 class="section-title">Settings</h2>
+            </div>
+        </section>
+    
+        <!-- Settings Display -->
+        <section class="security-settings-section">
+            <div class="settings-subsection">
+                <h2 class="subheading">Security</h2>
+                <hr class="section-divider"></h2>
+            </div>
+            <div class="settings-info">
+                <div class="settings-item">
+                    <label>Password:</label>
+                    <span class="user-detail">{{ maskedPassword }}</span>
+                </div>
+                <div class="settings-item">
+                    <label>Recent login:</label>
+                    <span class="user-detail">{{ recentLogin }}</span>
+                </div>
+            </div>
+
+            <div class="settings-subsection">
+                <h2 class="subheading">Contact Preferences</h2>
+                <hr class="section-divider"></hr>
+            </div>
+            <div class="settings-info">
+                <div class="settings-item">
+                    <label>Email:</label>
+                    <span class="user-detail">{{ email }}</span>
+                </div>
+                <div class="settings-item">
+                    <label>Phone Number:</label>
+                    <span class="user-detail">{{ phoneNumber }}</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Customer Settings -->
+    {% else %}
+    <h1>Welcome, {{fname}}</h1>
+
+    <!-- Navigation Bar -->
+    <div class="nav-bar">
+        <a href="/user-dashboard">Dashboard</a>
+        <a href="#">Transfer</a>
+        <a href="/transaction-history">Transactions</a>
+        <a href="#">Notifications</a>
+        <a href="/settings">Settings</a>
+    </div>
+
+    <!-- Main Content -->
+    <main class="content-container">
+        <!-- Header Section -->
+        <section class="user-section">
+            <div class="section-header">
+                <h2 class="section-title">Settings</h2>
+            </div>
+        </section>
+    
+        <!-- Settings Display -->
+        <section class="security-settings-section">
+            <div class="settings-subsection">
+                <h2 class="subheading">Security</h2>
+                <hr class="section-divider"></h2>
+            </div>
+            <div class="settings-info">
+                <div class="settings-item">
+                    <label>Password:</label>
+                    <span class="user-detail">{{ maskedPassword }}</span>
+                </div>
+                <div class="settings-item">
+                    <label>Recent login:</label>
+                    <span class="user-detail">{{ recentLogin }}</span>
+                </div>
+            </div>
+
+            <div class="settings-subsection">
+                <h2 class="subheading">Contact Preferences</h2>
+                <hr class="section-divider"></hr>
+            </div>
+            <div class="settings-info">
+                <div class="settings-item">
+                    <label>Email:</label>
+                    <span class="user-detail">{{ email }}</span>
+                </div>
+                <div class="settings-item">
+                    <label>Phone Number:</label>
+                    <span class="user-detail">{{ phoneNumber }}</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    {% endif %}
+</body>
+</html>

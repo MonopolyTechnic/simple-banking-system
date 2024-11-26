@@ -97,6 +97,17 @@ func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Contex
 	}
 }
 
+func GetGlobalStyles() string {
+	return fmt.Sprintf(
+		`<style>:root {
+			--banner-url: url("%s");
+			--primary-hex: %s;
+		}</style>`,
+		config["BANNER"],
+		config["PRIMARY_HEX"],
+	)
+}
+
 // Helper function to add a flash message to the flash session
 func AddFlash(r *http.Request, w http.ResponseWriter, msg string) {
 	flashSession, err2 := store.Get(r, "flash-session")
@@ -360,19 +371,23 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 
 // Information relating to the current logged in user's session
 type LogInSessionCookie struct {
-	LoggedIn     bool
-	Email        string
-	ProfileType  string
-	PhoneNumber  string
-	PhoneCarrier string
+	LoggedIn       bool
+	Email          string
+	FirstName      string
+	ProfileType    string
+	PhoneNumber    string
+	PhoneCarrier   string
+	MaskedPassword string
 }
 
 // All information relating to the current login attempt
 type LogInAttemptCookie struct {
-	Email        string
-	ProfileType  string
-	PhoneNumber  string
-	PhoneCarrier string
+	Email          string
+	FirstName      string
+	ProfileType    string
+	PhoneNumber    string
+	PhoneCarrier   string
+	MaskedPassword string
 }
 
 // SetLoggedIn is a helper function to set the login cookies
@@ -381,11 +396,13 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAtt
 	handle(err)
 	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
 	session.Values["logged-in"] = &LogInSessionCookie{
-		LoggedIn:     true,
-		Email:        attemptCookie.Email,
-		ProfileType:  attemptCookie.ProfileType,
-		PhoneNumber:  attemptCookie.PhoneNumber,
-		PhoneCarrier: attemptCookie.PhoneCarrier,
+		LoggedIn:       true,
+		Email:          attemptCookie.Email,
+		FirstName:      attemptCookie.FirstName,
+		ProfileType:    attemptCookie.ProfileType,
+		PhoneNumber:    attemptCookie.PhoneNumber,
+		PhoneCarrier:   attemptCookie.PhoneCarrier,
+		MaskedPassword: attemptCookie.MaskedPassword,
 	}
 	err = session.Save(r, w)
 	handle(err)
@@ -395,6 +412,8 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAtt
 func checkLoggedIn(r *http.Request, w http.ResponseWriter) (string, bool) {
 	session, err := store.Get(r, "current-session")
 	handle(err)
+	// Refresh the session with new activity
+	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
 	val, ok := session.Values["logged-in"]
 	loggedIn := false
 	if ok {
@@ -432,5 +451,22 @@ func handle(err error, fmtStr ...string) {
 	}
 	if err != nil {
 		log.Fatal(fmt)
+	}
+}
+
+func sendNotification(userID int, title string, content string) {
+	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+		_, err := conn.Exec(
+			context.Background(),
+			`INSERT INTO notifications (target_userid, title, content) VALUES ($1, $2, $3)`,
+			userID, title, content,
+		)
+		if err != nil {
+			return fmt.Errorf("Bad insert into notifications: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		handle(err, "Failed sending notification")
 	}
 }

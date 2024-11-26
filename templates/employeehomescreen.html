@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Monopoly-Technic</title>
+    <title>{{ bankname }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{ global_styles|safe }}
     <link rel="stylesheet" href="/static/style2.css">
     <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -29,13 +30,13 @@
                 </a>
             </div>
             <div class="header-middle">
-                <h2 class="brand-name">Bank Name</h2>
+                <h2 class="brand-name">{{ bankname }}</h2>
             </div>
             <div class="header-right">
                 <nav>
                     <ul class="header-nav">
                         <li><a href="#profile" class="icon-link"><span class="material-icons icon-large">person</span></a></li>
-                        <li><a href="#settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
+                        <li><a href="/settings" class="icon-link"><span class="material-icons icon-large">settings</span></a></li>
                         <li><a href="/logout" title="Sign out" class="icon-link"><span class="material-icons icon-large">logout</span></a></li>
                     </ul>
                 </nav>
@@ -107,7 +108,9 @@
     
         async function submitSearchForm(form) {
             const email = new FormData(form, null).get('email');
-            console.log("email is ", email);
+            const searchPreviewList = document.getElementById('emailSearchList');
+            searchPreviewList.innerHTML = '';
+            searchPreviewList.style.display = 'none';
             const data = await fetch(`/list-accounts?email=${email}`).then(res => res.status === 200 ? res.json() : null).catch(console.error);
             if (data) {
                 document.getElementById('error-flash-messages').innerHTML = '';

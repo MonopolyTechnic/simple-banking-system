@@ -1,0 +1,204 @@
+/* Global Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fa;
+}
+
+h1 {
+    font-size: 48px;
+    color: #545F71;
+    font-weight: 750;
+    text-align: center;
+}
+
+.flash-messages {
+    text-align: center;
+}
+
+.flash-error {
+    color: #a8313b;
+}
+
+.flash-success {
+    color: #388f6c;
+}
+
+.flash-info {
+    color: #33618f;
+}
+
+/* Header */
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background-image: var(--banner-url);
+    background-size: 100%; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-left, .header-middle, .header-right {
+    display: flex;
+    align-items: center;
+}
+
+.icon-link {
+    text-decoration: none;
+    color: #333;
+}
+
+.icon-large {
+    font-size: 35px;
+}
+
+.brand-name {
+    font-size: 24px;
+    color: #333;
+}
+
+.header-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 20px;
+}
+
+.header-nav li {
+    display: inline;
+}
+
+/* Bottom Header (Greeting) */
+.header-bottom {
+    padding: 10px 20px;
+    background-color: #fff;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-bar {
+    width: 100%;
+    background-color: var(--primary-hex);
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.nav-bar a {
+    margin: 0 15px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.nav-bar a:hover {
+    color: #e7e7e7;
+}
+
+.welcome-message {
+    font-size: 18px;
+    color: #333;
+}
+
+/* User Section */
+.user-section {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.section-header {
+    flex: 1;
+}
+
+.section-title {
+    font-size: 22px;
+    color: #333;
+}
+
+.section-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Content Container */
+.content-container {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* User Section */
+.user-section {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.section-header {
+    flex: 1;
+}
+
+.section-title {
+    font-size: 22px;
+    color: #333;
+}
+
+.section-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Security Settings Section */
+.security-settings-section {
+    width: 100%;
+    padding: 10px 0;  /* Adjust padding as needed */
+}
+
+.settings-subsection {
+    display: flex;
+    align-items: center;
+    gap: 10px; 
+}
+
+.subheading {
+    color: #555;
+    font-weight: lighter;
+    font-size: 18px;
+    margin: 0;
+}
+
+.section-divider {
+    flex-grow: 1;
+    border: none;
+    border-top: 2px solid rgba(102, 102, 102, 0.25);
+    margin-right: 20px;
+    margin-left: 20px;
+}
+
+/* Security Info Section */
+.settings-info {
+    margin-top: 15px; /* Add space above the content */
+    margin-bottom: 60px;
+}
+
+.settings-item {
+    display: flex;
+    margin-bottom: 10px; /* Add space between rows */
+    font-size: 14px; /* Adjust text size */
+}
+
+.settings-item label {
+    font-weight: bold;
+    margin-right: 5px;
+    color: #555; /* Matches the subheading color */
+}
+
+
+
+

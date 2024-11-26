@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS profiles(
                         NOT NULL
     ,password_hash      BYTEA
                         NOT NULL
+    ,masked_password    VARCHAR(32)
+                        NOT NULL
 );
 CREATE TABLE IF NOT EXISTS accounts(
     account_num             CHAR(16)
@@ -75,4 +77,24 @@ CREATE TABLE IF NOT EXISTS transactions(
         REFERENCES accounts(account_num)
     ,FOREIGN KEY (recipient_account)
         REFERENCES accounts(account_num)
+);
+CREATE TABLE IF NOT EXISTS notifications(
+    id                  INT
+                        NOT NULL
+                        PRIMARY KEY
+                        GENERATED ALWAYS AS IDENTITY  -- Starts at 1 and increases by 1 for each new row
+    ,title              VARCHAR(80)
+                        NOT NULL
+    ,content            VARCHAR(500)
+                        NOT NULL
+    ,target_userid      INT
+                        NOT NULL
+    ,sent_timestamp     TIMESTAMP
+                        NOT NULL
+                        DEFAULT NOW()
+    ,seen               BOOLEAN
+                        NOT NULL
+                        DEFAULT FALSE
+    ,FOREIGN KEY (target_userid)
+        REFERENCES profiles(id)
 );

@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    {{ global_styles|safe }}
     <link rel="stylesheet" href="/static/formstyle.css"> <!-- Link to CSS -->
-    <title>Add New User</title>
+    <title>{{ bankname }} - Freeze Account</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
@@ -20,7 +21,7 @@
     <form action="/change-status" method="POST">
         <!-- Admin First Name -->
         <label for="accnum">Account Number</label>
-        <input type="text" id="accnum" name="accnum" required placeholder="Enter account number">
+        <input type="text" id="accnum" name="accnum" required placeholder="Enter account number" maxlength="16">
 
         <!-- Target Status Dropdown -->
         <label for="targetstatus">Target Status</label>

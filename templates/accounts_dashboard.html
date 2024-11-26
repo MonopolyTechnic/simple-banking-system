@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Bank Account Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{ global_styles|safe }}
     <link rel="stylesheet" href="/static/userdashboard.css">
     <script src="https://kit.fontawesome.com/94aa5c9716.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -44,11 +45,11 @@
 
     <!-- Navigation Bar -->
     <div class="nav-bar">
+        <a href="/user-dashboard">Dashboard</a>
         <a href="/transfer"><span class="material-icons">keyboard_double_arrow_right</span>Transfer</a>
-        <a href="#"><span class="material-icons">request_page</span>Statements</a>
         <a href="/transaction-history"><span class="material-icons">receipt_long</span>Transactions</a>
-        <a href="#"><span class="material-icons">notifications</span>Notifications</a>
-        <a href="#"><span class="material-icons">settings</span>Settings</a>
+        <a href="/notifications"><span class="material-icons">notifications</span>Notifications</a>
+        <a href="/settings"><span class="material-icons">settings</span>Settings</a>
     </div>
 
     <div class="accounts-container">
@@ -59,9 +60,6 @@
                     <p>Account Number: {{ account.AccountNum }}</p>
                     <p>Balance: ${{ account.Balance | formatBalance }}</p>
                     <p>Status: {{ account.AccountStatus }}</p>
-                    <div class="button-container">
-                        <button class="button">View Account</button>
-                    </div>
                 </div>
             {% endif %}
         {% endfor %}

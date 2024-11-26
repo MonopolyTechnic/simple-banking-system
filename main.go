@@ -28,6 +28,7 @@ var (
 	host        string
 	port        string
 	env         map[string]string     = readEnv(".env")
+	config      map[string]string     = readEnv("config.env")
 	store       *sessions.CookieStore = sessions.NewCookieStore([]byte("your-secret-key")) // Change this to a secure key
 	smsGateways map[string]string     = map[string]string{
 		"AT&T":               "txt.att.net",
@@ -128,10 +129,14 @@ func main() {
 	http.HandleFunc("/forgot-email", forgotEmail)
 	http.HandleFunc("/verify-email-to-recover", verifyEmailToRecover)
 	http.HandleFunc("/post-recovered-email", postRecoveredEmail)
+	http.HandleFunc("/settings", settings)
 	http.HandleFunc("/user-dashboard", userDashboard)
 	http.HandleFunc("/transaction-history", transactionHistory)
 	http.HandleFunc("/transfer", transfer)
+	http.HandleFunc("/notifications", notifications)
 	http.HandleFunc("/change-status", changeStatus)
+
+	pongo2.Globals.Update(pongo2.Context{"global_styles": GetGlobalStyles()})
 
 	pongo2.RegisterFilter("getFlashType", getFlashType)
 	pongo2.RegisterFilter("getFlashMessage", getFlashMessage)
@@ -150,7 +155,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, "index.html")
+	RenderTemplate(w, "index.html", pongo2.Context{"logo": config["LOGO"], "bankname": config["BANK_NAME"]})
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +169,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, "loginuser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "loginuser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func loginEmployee(w http.ResponseWriter, r *http.Request) {
@@ -178,7 +183,7 @@ func loginEmployee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "loginemployee.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -211,7 +216,7 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 		// For example, you can redirect the user or render a confirmation page
 		http.Redirect(w, r, "/postresetpassword", http.StatusSeeOther)
 	}
-	RenderTemplate(w, "forgotpassword.html")
+	RenderTemplate(w, "forgotpassword.html", pongo2.Context{"bankname": config["BANK_NAME"]})
 }
 
 func resetPassword(w http.ResponseWriter, r *http.Request) {
@@ -280,11 +285,15 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Render the form with the token
-	RenderTemplate(w, "resetpassword.html", pongo2.Context{"Token": token, "flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "resetpassword.html", pongo2.Context{
+		"Token":    token,
+		"flashes":  RetrieveFlashes(r, w),
+		"bankname": config["BANK_NAME"],
+	})
 }
 
 func forgotPasswordSent(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "postresetpassword.html")
+	RenderTemplate(w, "postresetpassword.html", pongo2.Context{"bankname": config["BANK_NAME"]})
 }
 
 func userDashboard(w http.ResponseWriter, r *http.Request) {
@@ -357,7 +366,79 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//log.Printf("accounts: %+v", accounts)
-	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+	RenderTemplate(w, "accounts_dashboard.html", pongo2.Context{
+		"acclist":  accounts,
+		"flashes":  RetrieveFlashes(r, w),
+		"fname":    name,
+		"bankname": config["BANK_NAME"],
+	})
+}
+
+func notifications(w http.ResponseWriter, r *http.Request) {
+	profileType, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/login-user", http.StatusSeeOther)
+		return
+	}
+	if profileType != "customer" {
+		http.Error(w, "Unauthorized Request", http.StatusUnauthorized)
+		return
+	}
+
+	// Valid sign-in session
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, _ := session.Values["logged-in"]
+	email := val.(*LogInSessionCookie).Email
+
+	var messages []struct {
+		Title   string    `json:"Title"`
+		Content string    `json:"Content"`
+		Sent    time.Time `json:"Sent"`
+		Seen    bool      `json:"Seen"`
+	}
+	var name string
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		// Query to get the customer ID for the primary customer email
+		var id int
+		err := conn.QueryRow(
+			context.Background(),
+			`SELECT first_name, id FROM profiles WHERE email = $1`,
+			email,
+		).Scan(&name, &id)
+		if err != nil {
+			return fmt.Errorf("Invalid email: %s", email)
+		}
+		rows, err := conn.Query(
+			context.Background(),
+			`SELECT title, content, sent_timestamp, seen FROM notifications WHERE target_userid = $1 ORDER BY sent_timestamp DESC`,
+			id,
+		)
+		if err != nil {
+			return fmt.Errorf("Invalid return from accounts: %s", email)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var message struct {
+				Title   string    `json:"Title"`
+				Content string    `json:"Content"`
+				Sent    time.Time `json:"Sent"`
+				Seen    bool      `json:"Seen"`
+			}
+			if err := rows.Scan(&message.Title, &message.Content, &message.Sent, &message.Seen); err != nil {
+				return fmt.Errorf("Error scanning notification row: %v", err)
+			}
+			messages = append(messages, message)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("Error while iterating over notification rows: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		AddFlash(r, w, "e"+err.Error())
+	}
+	RenderTemplate(w, "notifications.html", pongo2.Context{"notifications": messages, "flashes": RetrieveFlashes(r, w), "fname": name})
 }
 
 func transfer(w http.ResponseWriter, r *http.Request) {
@@ -424,11 +505,20 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 		AddFlash(r, w, "e"+err.Error())
 	}
 	if r.Method == http.MethodPost {
+		var userA int
+		var userB sql.NullInt64
+		var userC int
+		var userD sql.NullInt64
 
 		sourceAccount := r.FormValue("sourceAccount")
 		destinationAccount := r.FormValue("destinationAccount")
 		amountStr := r.FormValue("amount")
 		amount, err := strconv.ParseFloat(amountStr, 64)
+		if sourceAccount == destinationAccount {
+			AddFlash(r, w, "eCannot transfer to the same account.")
+			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
+			return //return to avoid actually doing the transfer
+		}
 		if err != nil {
 			AddFlash(r, w, "e"+err.Error())
 			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
@@ -462,11 +552,19 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 			var tmp float64
 			err = conn.QueryRow(
 				context.Background(),
-				`SELECT balance FROM accounts WHERE account_num = $1`,
+				`SELECT balance, primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
 				destinationAccount,
-			).Scan(&dbal)
+			).Scan(&dbal, &userC, &userD)
 			if err != nil {
 				return fmt.Errorf("Destination Account does not exist.")
+			}
+			err = conn.QueryRow(
+				context.Background(),
+				`SELECT primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
+				sourceAccount,
+			).Scan(&userA, &userB)
+			if err != nil {
+				return fmt.Errorf("Source Account does not exist.")
 			}
 			err = conn.QueryRow(
 				context.Background(),
@@ -506,10 +604,25 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 			AddFlash(r, w, "e"+err.Error())
 		} else {
 			AddFlash(r, w, "sTransfer Success")
+			msg1 := fmt.Sprintf("Sent transfer of $%.2f to account #%s from #%s", amount, destinationAccount, sourceAccount)
+			msg2 := fmt.Sprintf("Received transfer of $%.2f from account #%s to #%s", amount, sourceAccount, destinationAccount)
+			sendNotification(userA, "Transfer", msg1)
+			if userB.Valid {
+				sendNotification(int(userB.Int64), "Transfer", msg1)
+			}
+			sendNotification(userC, "Transfer", msg2)
+			if userD.Valid {
+				sendNotification(int(userD.Int64), "Transfer", msg2)
+			}
 		}
 		http.Redirect(w, r, "/transfer", http.StatusSeeOther)
 	}
-	RenderTemplate(w, "transfer.html", pongo2.Context{"acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+	RenderTemplate(w, "transfer.html", pongo2.Context{
+		"acclist":  accounts,
+		"flashes":  RetrieveFlashes(r, w),
+		"fname":    name,
+		"bankname": config["BANK_NAME"],
+	})
 }
 
 func transactionHistory(w http.ResponseWriter, r *http.Request) {
@@ -692,7 +805,13 @@ func transactionHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	acclistJSONString := string(acclistJSON)
 	//log.Printf("accountsJSONString: %s", acclistJSONString)
-	RenderTemplate(w, "transaction_history.html", pongo2.Context{"acclistJSON": acclistJSONString, "acclist": accounts, "flashes": RetrieveFlashes(r, w), "fname": name})
+	RenderTemplate(w, "transaction_history.html", pongo2.Context{
+		"acclistJSON": acclistJSONString,
+		"acclist":     accounts,
+		"flashes":     RetrieveFlashes(r, w),
+		"fname":       name,
+		"bankname":    config["BANK_NAME"],
+	})
 }
 
 // Callback endpoint for login requests
@@ -709,7 +828,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
 		rows, _ := conn.Query(
 			context.Background(),
-			"SELECT profile_type, password_hash, phone_number, phone_carrier FROM profiles WHERE email = $1 AND profile_type = $2",
+			"SELECT first_name, profile_type, password_hash, phone_number, phone_carrier, masked_password FROM profiles WHERE email = $1 AND profile_type = $2",
 			r.FormValue("email"),
 			r.URL.Query().Get("profile_type"),
 		)
@@ -742,10 +861,12 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	attemptSession, err := store.Get(r, "login-attempt-session")
 	handle(err)
 	attemptSession.Values["data"] = &LogInAttemptCookie{
-		Email:        r.FormValue("email"),
-		ProfileType:  res[0].ProfileType.String,
-		PhoneNumber:  res[0].PhoneNumber.String,
-		PhoneCarrier: res[0].PhoneCarrier.String,
+		Email:          r.FormValue("email"),
+		FirstName:      res[0].FirstName.String,
+		ProfileType:    res[0].ProfileType.String,
+		PhoneNumber:    res[0].PhoneNumber.String,
+		PhoneCarrier:   res[0].PhoneCarrier.String,
+		MaskedPassword: res[0].MaskedPassword.String,
 	}
 	attemptSession.Options.MaxAge = 30 * 60 // 30 minutes
 	err = attemptSession.Save(r, w)
@@ -788,7 +909,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 			handle(err)
 		}
 
-		RenderTemplate(w, "2fa.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+		RenderTemplate(w, "2fa.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 	} else if r.Method == http.MethodPost {
 		code := r.FormValue("code")
 		actualCode, ok := twofaSession.Values["actualCode"]
@@ -832,6 +953,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	session.Values["logged-in"] = &LogInSessionCookie{
 		LoggedIn:     false,
 		Email:        "",
+		FirstName:    "",
 		ProfileType:  "",
 		PhoneNumber:  "",
 		PhoneCarrier: "",
@@ -849,8 +971,14 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if profileType == "employee" {
-		// TODO: Pass in the correct name that is stored in cookies
-		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{"fname": "Alex", "flashes": RetrieveFlashes(r, w)})
+		session, err := store.Get(r, "current-session")
+		handle(err)
+		val, _ := session.Values["logged-in"]
+		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{
+			"fname":    val.(*LogInSessionCookie).FirstName,
+			"bankname": config["BANK_NAME"],
+			"flashes":  RetrieveFlashes(r, w),
+		})
 	} else {
 		http.Redirect(w, r, "/user-dashboard", http.StatusSeeOther)
 	}
@@ -910,7 +1038,7 @@ func changeStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	RenderTemplate(w, "freezeaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "freezeaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
@@ -946,6 +1074,10 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		password := r.FormValue("pw")
+		maskedPassword := ""
+		if len(password) > 0 {
+			maskedPassword = string(password[0]) + strings.Repeat("*", len(password)-1)
+		}
 		// Date of Birth
 		dob := r.FormValue("dob")
 		// Billing Address
@@ -971,7 +1103,8 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 					billing_address,
 					phone_number,
 					phone_carrier,
-					password_hash
+					password_hash,
+					masked_password
 				) VALUES (
 					'customer', 
 					$1,
@@ -981,7 +1114,8 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 					$5, 
 					$6, 
 					$7, 
-					$8
+					$8,
+					$9
 				);`,
 				firstName,
 				lastName,
@@ -991,6 +1125,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 				phoneNum,
 				carrier,
 				passwordHash,
+				maskedPassword,
 			)
 
 			// Check for error and return if any
@@ -1016,7 +1151,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 	// Quality of life improvement would be to somehow persist the form data for a retry
 	// Render the add user form (in case of GET request or on error)
-	RenderTemplate(w, "adduser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "adduser.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func openAccount(w http.ResponseWriter, r *http.Request) {
@@ -1195,7 +1330,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 		return
 	}
-	RenderTemplate(w, "openaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "openaccount.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func listAccounts(w http.ResponseWriter, r *http.Request) {
@@ -1320,9 +1455,20 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Extract transaction amount
 		amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
 
+		var userA int
+		var userB sql.NullInt64
+
 		// Create the transaction and update the account balance
 		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
 		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			err := conn.QueryRow(
+				context.Background(),
+				`SELECT primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
+				recipient,
+			).Scan(&userA, &userB)
+			if err != nil {
+				return fmt.Errorf("Failed to retrieve recipient account: %v", err)
+			}
 			err = checkStatus(conn, recipient)
 			if err != nil {
 				return fmt.Errorf("Account failure: %v", err)
@@ -1393,13 +1539,26 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 		// Flash message after successful insertion
 		AddFlash(r, w, fmt.Sprintf("s%s of $%.2f completed successfully!", strings.Title(transactionType), amount))
 
+		// Send notification to each user
+		msg := "Error"
+		if transactionType == "deposit" {
+			msg = fmt.Sprintf("Deposit of $%.2f to account #%s", amount, recipient)
+		}
+		if transactionType == "withdraw" {
+			msg = fmt.Sprintf("Withdrawal of $%.2f from account #%s", amount, recipient)
+		}
+		sendNotification(userA, "Transaction", msg)
+		if userB.Valid {
+			sendNotification(int(userB.Int64), "Transaction", msg)
+		}
+
 		// Respond with a success message
 		http.Redirect(w, r, "/employee-dashboard", http.StatusSeeOther)
 	}
 
 	// Quality of life improvement would be to somehow persist the form data for a retry
 	// Render the make transaction form (in case of GET request or on error)
-	RenderTemplate(w, "depositwithdraw.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+	RenderTemplate(w, "depositwithdraw.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 }
 
 func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
@@ -1443,7 +1602,7 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
 }
 
 func forgotEmail(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "forgotemail.html")
+	RenderTemplate(w, "forgotemail.html", pongo2.Context{"bankname": config["BANK_NAME"]})
 }
 
 func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
@@ -1470,7 +1629,7 @@ func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
 		// Handle case where no rows are found
 		if err != nil {
 			AddFlash(r, w, "eInformation not linked to an existing account.")
-			RenderTemplate(w, "forgotemail.html", pongo2.Context{"flashes": RetrieveFlashes(r, w)})
+			RenderTemplate(w, "forgotemail.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
 			return nil
 		}
 
@@ -1490,7 +1649,7 @@ func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
 		log.Println("Masked email:", maskedEmail)
 
 		// Render template with masked email
-		RenderTemplate(w, "verifyemailtorecover.html", pongo2.Context{"MaskedEmail": maskedEmail})
+		RenderTemplate(w, "verifyemailtorecover.html", pongo2.Context{"MaskedEmail": maskedEmail, "bankname": config["BANK_NAME"]})
 
 		return nil
 	})
@@ -1502,5 +1661,48 @@ func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
 }
 
 func postRecoveredEmail(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "postrecoveredemail.html")
+	RenderTemplate(w, "postrecoveredemail.html", pongo2.Context{"bankname": config["BANK_NAME"]})
+}
+
+func settings(w http.ResponseWriter, r *http.Request) {
+	_, loggedIn := checkLoggedIn(r, w)
+	if !loggedIn {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Retrieve session data
+	session, err := store.Get(r, "current-session")
+	handle(err)
+	val, _ := session.Values["logged-in"]
+	// Extract email and masked password directly
+	userEmail := val.(*LogInSessionCookie).Email
+	maskedPassword := val.(*LogInSessionCookie).MaskedPassword
+
+	var profileType, firstName, phoneNumber string
+
+	// Retrieve the first_name for the logged-in user using email
+	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		return conn.QueryRow(
+			context.Background(),
+			"SELECT profile_type, first_name, phone_number FROM profiles WHERE email = $1",
+			userEmail,
+		).Scan(&profileType, &firstName, &phoneNumber)
+	})
+	if err != nil {
+		// Handle the error (e.g., log or return an error message)
+		log.Println("Error retrieving user data:", err)
+	}
+
+	recentLogin := time.Now().Format("2006-01-02 15:04:05")
+
+	RenderTemplate(w, "settings.html", pongo2.Context{
+		"profileType":    profileType,
+		"fname":          firstName,
+		"recentLogin":    recentLogin,
+		"email":          userEmail,
+		"phoneNumber":    phoneNumber,
+		"maskedPassword": maskedPassword,
+		"bankname":       config["BANK_NAME"],
+	})
 }

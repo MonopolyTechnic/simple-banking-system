@@ -48,7 +48,7 @@ body {
 
 .nav-bar {
     width: 100%;
-    background-color: #545F71;
+    background-color: var(--primary-hex);
     display: flex;
     justify-content: center;
     padding: 10px 0;
@@ -172,7 +172,7 @@ body {
 
 .button {
     border-radius: 10px;
-    background-color: #545F71;
+    background-color: var(--primary-hex);
     color: white;
     padding: 10px 20px;
     width: 160px;
@@ -220,7 +220,7 @@ body {
 .transfer-form .form-group button {
     width: 100%;
     padding: 10px;
-    background-color: #545F71;
+    background-color: var(--primary-hex);
     color: white;
     border-radius: 4px;
     cursor: pointer;
@@ -230,5 +230,30 @@ body {
 
 .transfer-form .form-group button:hover {
     background-color: #e7e7e7;
-    color: #545F71;
+    color: #545f71;
+}
+
+.notifications {
+    margin-top: 15px;
+}
+
+.notification {
+    border-top: solid 1px black;
+    border-bottom: solid 1px black;
+    padding: 6px 14px;
+    min-width: 500px;
+}
+
+.notification > * {
+    margin: 0;
+    font-size: 16px;
+    text-align: left;
+}
+
+.notification > p {
+    font-size: 15px;
+}
+
+.notification.seen {
+    opacity: 0.6;
 }

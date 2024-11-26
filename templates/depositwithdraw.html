@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    {{ global_styles|safe }}
     <link rel="stylesheet" href="/static/formstyle.css"> <!-- Link to CSS -->
     <title>Deposit/Withdraw Money</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,7 +29,7 @@
 
         <!-- Account Number -->
         <label for="recipient">Account Number</label>
-        <input type="text" id="recipient" name="recipient" required placeholder="1111222233334444">
+        <input type="text" id="recipient" name="recipient" required placeholder="1111222233334444" maxlength="16">
 
         <!-- Transaction Amount -->
         <label for="amount">Transaction Amount</label>
