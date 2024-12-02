@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/MonopolyTechnic/simple-banking-system/models"
+	"github.com/MonopolyTechnic/simple-banking-system/utils"
 	"github.com/flosch/pongo2/v4"
 	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/pgtype"
@@ -27,8 +28,8 @@ import (
 var (
 	host        string
 	port        string
-	env         map[string]string     = readEnv(".env")
-	config      map[string]string     = readEnv("config.env")
+	env         map[string]string     = utils.ReadEnv(".env")
+	config      map[string]string     = utils.ReadEnv("config.env")
 	store       *sessions.CookieStore = sessions.NewCookieStore([]byte("your-secret-key")) // Change this to a secure key
 	smsGateways map[string]string     = map[string]string{
 		"AT&T":               "txt.att.net",
@@ -91,15 +92,15 @@ func main() {
 	port = env["PORT"]
 	// Set up tables if they do not exist yet
 	exec, err := os.ReadFile("create_tables.sql")
-	handle(err)
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	utils.Handle(err)
+	err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		_, err := conn.Exec(context.Background(), string(exec))
-		handle(err, "Table creation failed")
+		utils.Handle(err, "Table creation failed")
 
 		log.Println("Tables successfully created.")
 		return nil
 	})
-	handle(err)
+	utils.Handle(err)
 
 	// Allow encoding of LogInSessionCookie for session cookies
 	gob.Register(&LogInSessionCookie{})
@@ -245,7 +246,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 
 		// Proceed with updating the password (e.g., update the database)
 		// UpdatePassword(token, newPassword)
-		err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+		err := utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 
 			// Hash the new password before saving it
 			newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -309,7 +310,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 
 	// Valid sign-in session
 	session, err := store.Get(r, "current-session")
-	handle(err)
+	utils.Handle(err)
 	val, _ := session.Values["logged-in"]
 	email := val.(*LogInSessionCookie).Email
 	var accounts []struct {
@@ -319,7 +320,7 @@ func userDashboard(w http.ResponseWriter, r *http.Request) {
 		AccountStatus string
 	}
 	var name string
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		// Query to get the customer ID for the primary customer email
 		var id int
 		err := conn.QueryRow(
@@ -388,7 +389,7 @@ func notifications(w http.ResponseWriter, r *http.Request) {
 
 	// Valid sign-in session
 	session, err := store.Get(r, "current-session")
-	handle(err)
+	utils.Handle(err)
 	val, _ := session.Values["logged-in"]
 	email := val.(*LogInSessionCookie).Email
 
@@ -399,7 +400,7 @@ func notifications(w http.ResponseWriter, r *http.Request) {
 		Seen    bool      `json:"Seen"`
 	}
 	var name string
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		// Query to get the customer ID for the primary customer email
 		var id int
 		err := conn.QueryRow(
@@ -460,7 +461,7 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 
 	// Valid sign-in session
 	session, err := store.Get(r, "current-session")
-	handle(err)
+	utils.Handle(err)
 	val, _ := session.Values["logged-in"]
 	email := val.(*LogInSessionCookie).Email
 
@@ -469,7 +470,7 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 		Balance float64 `json:"Balance"`
 	}
 	var name string
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		// Query to get the customer ID for the primary customer email
 		var id int
 		err := conn.QueryRow(
@@ -544,7 +545,7 @@ func transfer(w http.ResponseWriter, r *http.Request) {
 			AddFlash(r, w, "eBalance too low to transfer this amount.")
 			http.Redirect(w, r, "/transfer", http.StatusSeeOther)
 		}
-		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Query to get the customer ID for the primary customer email
 			err := checkStatus(conn, sourceAccount)
 			if err != nil {
@@ -644,7 +645,7 @@ func transactionHistory(w http.ResponseWriter, r *http.Request) {
 
 	// Valid sign-in session
 	session, err := store.Get(r, "current-session")
-	handle(err)
+	utils.Handle(err)
 	val, _ := session.Values["logged-in"]
 	email := val.(*LogInSessionCookie).Email
 
@@ -654,7 +655,7 @@ func transactionHistory(w http.ResponseWriter, r *http.Request) {
 		Incoming []transaction `json:"Incoming"`
 	}
 	var name string
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		// Query to get the customer ID for the primary customer email
 		var id int
 		err := conn.QueryRow(
@@ -831,7 +832,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	var err2 error
 
 	// Check the database for this profile
-	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err := utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		rows, _ := conn.Query(
 			context.Background(),
 			"SELECT first_name, profile_type, password_hash, phone_number, phone_carrier, masked_password FROM profiles WHERE email = $1 AND profile_type = $2",
@@ -839,7 +840,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 			r.URL.Query().Get("profile_type"),
 		)
 		res, err2 = pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Profile])
-		handle(err2, "CollectRows failed")
+		utils.Handle(err2, "CollectRows failed")
 
 		if len(res) == 0 {
 			return errors.New("Invalid credentials")
@@ -865,7 +866,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	}
 	// Valid credentials, move on to 2FA
 	attemptSession, err := store.Get(r, "login-attempt-session")
-	handle(err)
+	utils.Handle(err)
 	attemptSession.Values["data"] = &LogInAttemptCookie{
 		Email:          r.FormValue("email"),
 		FirstName:      res[0].FirstName.String,
@@ -876,7 +877,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	}
 	attemptSession.Options.MaxAge = 30 * 60 // 30 minutes
 	err = attemptSession.Save(r, w)
-	handle(err)
+	utils.Handle(err)
 	redirect_uri := fmt.Sprintf("/twofa")
 	http.Redirect(w, r, redirect_uri, http.StatusSeeOther)
 }
@@ -884,7 +885,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 func twofa(w http.ResponseWriter, r *http.Request) {
 	// Get the session
 	twofaSession, err := store.Get(r, "twofa-session")
-	handle(err)
+	utils.Handle(err)
 	twofaSession.Options.MaxAge = 10 * 60 // 10 minutes
 
 	if r.Method == http.MethodGet {
@@ -893,7 +894,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				AddFlash(r, w, "sA new code has been sent to your phone. Please enter the new code.")
 			}
 			attemptSession, err := store.Get(r, "login-attempt-session")
-			handle(err)
+			utils.Handle(err)
 			val, ok := attemptSession.Values["data"]
 			if !ok {
 				http.Error(w, "Your sign-in session has timed out. Please sign in again.", http.StatusUnauthorized)
@@ -906,13 +907,13 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 			actualCode, err := SendCode(phone_number, phone_carrier)
 			if err != nil {
 				http.Error(w, "Unable to send code", http.StatusInternalServerError)
-				handle(err)
+				utils.Handle(err)
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			// log.Println(actualCode)
+			log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
-			handle(err)
+			utils.Handle(err)
 		}
 
 		RenderTemplate(w, "2fa.html", pongo2.Context{"flashes": RetrieveFlashes(r, w), "bankname": config["BANK_NAME"]})
@@ -923,7 +924,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 		if ok && code == actualCode {
 			// Code is correct, redirect to employee dashboard or accounts page
 			attemptSession, err := store.Get(r, "login-attempt-session")
-			handle(err)
+			utils.Handle(err)
 			val, ok := attemptSession.Values["data"]
 			if !ok {
 				http.Error(w, "Your sign-in session has timed out. Please sign in again.", http.StatusUnauthorized)
@@ -955,7 +956,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 func logout(w http.ResponseWriter, r *http.Request) {
 	// Mark as logged in
 	session, err := store.Get(r, "current-session")
-	handle(err)
+	utils.Handle(err)
 	session.Values["logged-in"] = &LogInSessionCookie{
 		LoggedIn:     false,
 		Email:        "",
@@ -965,7 +966,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		PhoneCarrier: "",
 	}
 	err = session.Save(r, w)
-	handle(err)
+	utils.Handle(err)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -978,7 +979,7 @@ func employeeDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	if profileType == "employee" {
 		session, err := store.Get(r, "current-session")
-		handle(err)
+		utils.Handle(err)
 		val, _ := session.Values["logged-in"]
 		RenderTemplate(w, "employeehomescreen.html", pongo2.Context{
 			"fname":    val.(*LogInSessionCookie).FirstName,
@@ -1011,7 +1012,7 @@ func changeStatus(w http.ResponseWriter, r *http.Request) {
 		// Extract the data from the form
 		account_num := r.FormValue("accnum")
 		targetstatus := r.FormValue("targetstatus")
-		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 			var tmp string
 			if targetstatus == "CLOSED" {
 				var bal float64
@@ -1097,7 +1098,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Insert the new user into the database
-		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 			_, err := conn.Exec(
 				context.Background(),
 				`INSERT INTO profiles (
@@ -1194,7 +1195,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		var primaryCustomerID int
 		var secondaryCustomerID int
 		rc := 0
-		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 			// Query to get the customer ID for the primary customer email
 			err := conn.QueryRow(
 				context.Background(),
@@ -1257,7 +1258,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 		//query without secondaryID
 		if secondaryCustomerID == 0 {
 			// Insert the new not joint account into the 'accounts' table
-			err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 				// Prepare SQL insert statement
 				query := `
 					INSERT INTO accounts (
@@ -1290,7 +1291,7 @@ func openAccount(w http.ResponseWriter, r *http.Request) {
 			})
 		} else {
 			// Insert the new joint account with secondaryID into the 'accounts' table
-			err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+			err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 				// Prepare SQL insert statement
 				query := `
 					INSERT INTO accounts (
@@ -1354,7 +1355,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 	customerEmail := r.URL.Query().Get("email")
 	var customerID int
 	var accountData []models.Account
-	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err := utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		err := conn.QueryRow(
 			context.Background(),
 			`SELECT id FROM profiles WHERE email = $1 AND profile_type = 'customer'`,
@@ -1371,7 +1372,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 			customerID,
 		)
 		res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.Account])
-		handle(err, "CollectRows failed")
+		utils.Handle(err, "CollectRows failed")
 		if err != nil {
 			http.Error(w, "Server error", http.StatusInternalServerError)
 		}
@@ -1418,7 +1419,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 	jsonBytes, err := json.Marshal(jsonData)
 	if err != nil {
-		handle(err, "Failed to generate JSON")
+		utils.Handle(err, "Failed to generate JSON")
 	}
 
 	w.Header().Add("Content-Type", "application/json")
@@ -1466,7 +1467,7 @@ func makeTransaction(w http.ResponseWriter, r *http.Request) {
 
 		// Create the transaction and update the account balance
 		// Postgres only supports positional args ($1, $2, etc.) for 1 query, so must use fmt.Sprintf instead
-		err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+		err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 			err := conn.QueryRow(
 				context.Background(),
 				`SELECT primary_customer_id, secondary_customer_id FROM accounts WHERE account_num = $1`,
@@ -1579,7 +1580,7 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
 	}
 	customerEmail := r.URL.Query().Get("email") + "%" //% is used to search for emails that start with the given email
 	var potential_emails []string
-	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err := utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		query := `SELECT email FROM profiles WHERE email LIKE $1 AND profile_type = 'customer' ORDER BY email LIMIT 20`
 		rows, err := conn.Query(context.Background(), query, customerEmail)
 		if err != nil {
@@ -1597,11 +1598,11 @@ func listPotentialEmails(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		handle(err) //I think this is fine, not sure what errors could cause this
+		utils.Handle(err) //I think this is fine, not sure what errors could cause this
 	}
 	potential_emails_JSON, err := json.Marshal(potential_emails)
 	if err != nil {
-		handle(err, "Failed to generate JSON")
+		utils.Handle(err, "Failed to generate JSON")
 	}
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(potential_emails_JSON)
@@ -1626,7 +1627,7 @@ func verifyEmailToRecover(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received user info: fname=%s, lname=%s, dob=%s\n", fname, lname, dob)
 
 	// Open database connection using OpenDBConnection
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		// Query the database for the user
 		query := `SELECT email FROM profiles WHERE first_name = $1 AND last_name = $2 AND date_of_birth = $3`
 		var email string
@@ -1679,7 +1680,7 @@ func settings(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data
 	session, err := store.Get(r, "current-session")
-	handle(err)
+	utils.Handle(err)
 	val, _ := session.Values["logged-in"]
 	// Extract email and masked password directly
 	userEmail := val.(*LogInSessionCookie).Email
@@ -1688,7 +1689,7 @@ func settings(w http.ResponseWriter, r *http.Request) {
 	var profileType, firstName, phoneNumber string
 
 	// Retrieve the first_name for the logged-in user using email
-	err = OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err = utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		return conn.QueryRow(
 			context.Background(),
 			"SELECT profile_type, first_name, phone_number FROM profiles WHERE email = $1",
