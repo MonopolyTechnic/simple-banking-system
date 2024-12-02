@@ -16,17 +16,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MonopolyTechnic/simple-banking-system/utils"
 	"github.com/flosch/pongo2/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 )
 
-// Wrapper func to read the env file while only returning the map
-func readEnv(filepath string) map[string]string {
-	env, err := godotenv.Read(filepath)
-	handle(err)
-	return env
-}
+
 
 func capitalizeFilter(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	// Ensure the value is a string
@@ -59,21 +54,11 @@ func stripNonAlphanumeric(input string) string {
 	return re.ReplaceAllString(input, "")
 }
 
-// Helper func that acts as a context manager to open a new connection to the database
-func OpenDBConnection(fn func(conn *pgxpool.Pool) error) error {
-	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", env["DB_USERNAME"], env["DB_PASSWORD"], env["DB_HOST"], env["DB_PORT"], env["DB_NAME"])
-	conn, err := pgxpool.New(context.Background(), url)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	return fn(conn)
-}
 
 // Helper function to render a template
 func RenderTemplate(w http.ResponseWriter, filename string, ctx ...pongo2.Context) {
 	tpl, err := pongo2.FromFile("./templates/" + filename)
-	handle(err)
+	utils.Handle(err)
 
 	var context pongo2.Context
 	if len(ctx) == 0 {
@@ -111,16 +96,16 @@ func GetGlobalStyles() string {
 // Helper function to add a flash message to the flash session
 func AddFlash(r *http.Request, w http.ResponseWriter, msg string) {
 	flashSession, err2 := store.Get(r, "flash-session")
-	handle(err2)
+	utils.Handle(err2)
 	flashSession.AddFlash(msg)
 	err2 = flashSession.Save(r, w)
-	handle(err2)
+	utils.Handle(err2)
 }
 
 // Helper func to retrieve flashes
 func RetrieveFlashes(r *http.Request, w http.ResponseWriter) []interface{} {
 	session, err := store.Get(r, "flash-session")
-	handle(err)
+	utils.Handle(err)
 
 	flashes := session.Flashes()
 	session.Save(r, w)
@@ -133,7 +118,7 @@ func RetrieveFlashes(r *http.Request, w http.ResponseWriter) []interface{} {
 func getFlashType(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	if str, ok := value.Interface().(string); ok {
 		if len(str) < 1 {
-			handle(errors.New("Flash message is empty"))
+			utils.Handle(errors.New("Flash message is empty"))
 		}
 		var flashType string = string(str[0]) //only handles ascii
 		if flashType == "s" {
@@ -141,24 +126,24 @@ func getFlashType(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pon
 		} else if flashType == "e" {
 			return pongo2.AsValue("error"), nil
 		} else {
-			handle(errors.New("Flash message is not of the correct format , start character should be 's' or 'e'"))
+			utils.Handle(errors.New("Flash message is not of the correct format , start character should be 's' or 'e'"))
 		}
 	}
-	handle(errors.New("Flash message is not of the correct format , message should be a string"))
-	log.Println("should never print this utils.getFlashType")
+	utils.Handle(errors.New("Flash message is not of the correct format , message should be a string"))
+	log.Println("should never print this main_helper.getFlashType")
 	return pongo2.AsValue("will never reach here"), nil
 }
 
 func getFlashMessage(value *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	if str, ok := value.Interface().(string); ok {
 		if len(str) < 1 {
-			handle(errors.New("Flash message is empty"))
+			utils.Handle(errors.New("Flash message is empty"))
 		}
 		var flashMessage string = str[1:]
 		return pongo2.AsValue(flashMessage), nil
 	}
-	handle(errors.New("Flash message is not of the correct format , message should be a string"))
-	log.Println("should never print this utils.getFlashMessage")
+	utils.Handle(errors.New("Flash message is not of the correct format , message should be a string"))
+	log.Println("should never print this main_helper.getFlashMessage")
 	return pongo2.AsValue("will never reach here"), nil
 }
 
@@ -393,7 +378,7 @@ type LogInAttemptCookie struct {
 // SetLoggedIn is a helper function to set the login cookies
 func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAttemptCookie) {
 	session, err := store.Get(r, "current-session")
-	handle(err)
+	utils.Handle(err)
 	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
 	session.Values["logged-in"] = &LogInSessionCookie{
 		LoggedIn:       true,
@@ -405,13 +390,13 @@ func SetLoggedIn(w http.ResponseWriter, r *http.Request, attemptCookie *LogInAtt
 		MaskedPassword: attemptCookie.MaskedPassword,
 	}
 	err = session.Save(r, w)
-	handle(err)
+	utils.Handle(err)
 }
 
 // Returns the type of profile logged in along with a boolean indicating if the user is logged in or not
 func checkLoggedIn(r *http.Request, w http.ResponseWriter) (string, bool) {
 	session, err := store.Get(r, "current-session")
-	handle(err)
+	utils.Handle(err)
 	// Refresh the session with new activity
 	session.Options.MaxAge = 24 * 60 * 60 // 24 hours before automatically logging out
 	val, ok := session.Values["logged-in"]
@@ -443,19 +428,10 @@ func (t *transaction) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// Helper func to handle errors
-func handle(err error, fmtStr ...string) {
-	fmt := fmt.Sprintf("%v\n", err)
-	if len(fmtStr) >= 1 {
-		fmt = fmtStr[0] + ": " + fmt
-	}
-	if err != nil {
-		log.Fatal(fmt)
-	}
-}
+
 
 func sendNotification(userID int, title string, content string) {
-	err := OpenDBConnection(func(conn *pgxpool.Pool) error {
+	err := utils.OpenDBConnection(func(conn *pgxpool.Pool) error {
 		_, err := conn.Exec(
 			context.Background(),
 			`INSERT INTO notifications (target_userid, title, content) VALUES ($1, $2, $3)`,
@@ -467,6 +443,6 @@ func sendNotification(userID int, title string, content string) {
 		return nil
 	})
 	if err != nil {
-		handle(err, "Failed sending notification")
+		utils.Handle(err, "Failed sending notification")
 	}
 }
