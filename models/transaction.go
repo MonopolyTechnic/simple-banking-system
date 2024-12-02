@@ -1,6 +1,8 @@
 package models
 
-import "github.com/jackc/pgx/pgtype"
+import (
+	"github.com/jackc/pgx/pgtype"
+)
 
 // Represents a Transaction and its data
 type Transaction struct {
