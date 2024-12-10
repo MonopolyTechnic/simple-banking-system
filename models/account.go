@@ -17,18 +17,23 @@ type Account struct {
 func (a *Account) GetAccountNumber() string {
 	return a.accountNumber.String
 }
+
 func (a *Account) GetPrimaryCustomerID() int {
 	return int(a.primaryCustomerID.Int)
 }
+
 func (a *Account) GetSecondaryCustomerID() int {
 	return int(a.secondaryCustomerID.Int)
 }
+
 func (a *Account) GetAccountType() string {
 	return a.accountType.String
 }
+
 func (a *Account) GetBalance() pgtype.Numeric {
 	return a.balance
 }
+
 func (a *Account) GetAccountStatus() string {
 	return a.accountStatus.String
 }
