@@ -1,6 +1,8 @@
 package models
 
 import (
+	"math"
+
 	"github.com/jackc/pgx/pgtype"
 )
 
@@ -34,8 +36,8 @@ func (a *Account) GetAccountType() string {
 	return a.accountType.String
 }
 
-func (a *Account) GetBalance() pgtype.Numeric {
-	return a.balance
+func (a *Account) GetBalance() float64 {
+	return float64(a.balance.Int.Int64()) * math.Pow(10, float64(a.balance.Exp))
 }
 
 func (a *Account) GetAccountStatus() string {

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"math"
 	"time"
 
 	"github.com/jackc/pgx/pgtype"
@@ -36,8 +37,8 @@ func (t *Transaction) GetRecipientId() string {
 	return t.recipientId.String
 }
 
-func (t *Transaction) GetAmount() pgtype.Numeric {
-	return t.amount
+func (t *Transaction) GetAmount() float64 {
+	return float64(t.amount.Int.Int64()) * math.Pow(10, float64(t.amount.Exp))
 }
 
 func (t *Transaction) GetType() string {
