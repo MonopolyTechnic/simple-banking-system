@@ -18,7 +18,6 @@ import (
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
 	"github.com/gorilla/sessions"
-	"github.com/jackc/pgx/pgtype"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
@@ -910,7 +909,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			// log.Println(actualCode)
+			log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -1396,24 +1395,14 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 	jsonData := make([]JSONAccount, len(accountData))
 	for i, item := range accountData {
-		if item.AccountNumber.Status == pgtype.Present {
-			jsonData[i].AccountNumber = item.AccountNumber.String
+		jsonData[i].AccountNumber = item.GetAccountNumber()
+		jsonData[i].PrimaryCustomerID = int32(item.GetPrimaryCustomerID())
+		if item.HasSecondaryCustomerID() {
+			jsonData[i].SecondaryCustomerID = int32(item.GetSecondaryCustomerID())
 		}
-		if item.PrimaryCustomerID.Status == pgtype.Present {
-			jsonData[i].PrimaryCustomerID = item.PrimaryCustomerID.Int
-		}
-		if item.SecondaryCustomerID.Status == pgtype.Present {
-			jsonData[i].SecondaryCustomerID = item.SecondaryCustomerID.Int
-		}
-		if item.AccountType.Status == pgtype.Present {
-			jsonData[i].AccountType = item.AccountType.String
-		}
-		if item.Balance.Status == pgtype.Present {
-			jsonData[i].Balance = float64(item.Balance.Int.Int64()) * math.Pow(10, float64(item.Balance.Exp))
-		}
-		if item.AccountStatus.Status == pgtype.Present {
-			jsonData[i].AccountStatus = item.AccountStatus.String
-		}
+		jsonData[i].AccountType = item.GetAccountType()
+		jsonData[i].Balance = float64(item.GetBalance()) * math.Pow(10, float64(item.GetBalance()))
+		jsonData[i].AccountStatus = item.GetAccountStatus()
 	}
 
 	jsonBytes, err := json.Marshal(jsonData)
