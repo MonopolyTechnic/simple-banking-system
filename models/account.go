@@ -22,6 +22,10 @@ func (a *Account) GetPrimaryCustomerID() int {
 	return int(a.primaryCustomerID.Int)
 }
 
+func (a *Account) HasSecondaryCustomerID() bool {
+	return a.secondaryCustomerID.Status == pgtype.Present
+}
+
 func (a *Account) GetSecondaryCustomerID() int {
 	return int(a.secondaryCustomerID.Int)
 }

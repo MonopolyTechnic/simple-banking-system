@@ -34,6 +34,10 @@ func (p *Profile) GetFirstName() string {
 	return p.firstName.String
 }
 
+func (p *Profile) HasMiddleName() bool {
+	return p.middleName.Status == pgtype.Present
+}
+
 func (p *Profile) GetMiddleName() string {
 	return p.middleName.String
 }

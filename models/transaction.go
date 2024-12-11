@@ -20,6 +20,14 @@ func (t *Transaction) GetId() int64 {
 	return t.id.Int
 }
 
+func (t *Transaction) HasSourceId() bool {
+	return t.sourceId.Status == pgtype.Present
+}
+
+func (t *Transaction) HasRecipientId() bool {
+	return t.recipientId.Status == pgtype.Present
+}
+
 func (t *Transaction) GetSourceId() string {
 	return t.sourceId.String
 }
