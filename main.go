@@ -845,7 +845,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 			return errors.New("Invalid credentials")
 		}
 		// Check the password against its hash
-		err := bcrypt.CompareHashAndPassword(res[0].PasswordHash.Bytes, []byte(r.FormValue("password")))
+		err := bcrypt.CompareHashAndPassword(res[0].GetPasswordHash(), []byte(r.FormValue("password")))
 		if err != nil {
 			return errors.New("Invalid credentials")
 		}
@@ -868,11 +868,11 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	handle(err)
 	attemptSession.Values["data"] = &LogInAttemptCookie{
 		Email:          r.FormValue("email"),
-		FirstName:      res[0].FirstName.String,
-		ProfileType:    res[0].ProfileType.String,
-		PhoneNumber:    res[0].PhoneNumber.String,
-		PhoneCarrier:   res[0].PhoneCarrier.String,
-		MaskedPassword: res[0].MaskedPassword.String,
+		FirstName:      res[0].GetFirstName(),
+		ProfileType:    res[0].GetProfileType(),
+		PhoneNumber:    res[0].GetPhoneNumber(),
+		PhoneCarrier:   res[0].GetPhoneCarrier(),
+		MaskedPassword: res[0].GetMaskedPassword(),
 	}
 	attemptSession.Options.MaxAge = 30 * 60 // 30 minutes
 	err = attemptSession.Save(r, w)
