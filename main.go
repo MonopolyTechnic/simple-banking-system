@@ -18,7 +18,6 @@ import (
 	"github.com/MonopolyTechnic/simple-banking-system/models"
 	"github.com/flosch/pongo2/v4"
 	"github.com/gorilla/sessions"
-	"github.com/jackc/pgx/pgtype"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
@@ -1396,24 +1395,14 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 	jsonData := make([]JSONAccount, len(accountData))
 	for i, item := range accountData {
-		if item.GetAccountNumber.Status == pgtype.Present {
-			jsonData[i].AccountNumber = item.GetAccountNumber()
+		jsonData[i].AccountNumber = item.GetAccountNumber()
+		jsonData[i].PrimaryCustomerID = int32(item.GetPrimaryCustomerID())
+		if item.HasSecondaryCustomerID() {
+			jsonData[i].SecondaryCustomerID = int32(item.GetSecondaryCustomerID())
 		}
-		if item.GetPrimaryCustomerID.Status == pgtype.Present {
-			jsonData[i].PrimaryCustomerID = item.GetPrimaryCustomerID()
-		}
-		if item.GetSecondaryCustomerID.Status == pgtype.Present {
-			jsonData[i].SecondaryCustomerID = item.GetSecondaryCustomerID()
-		}
-		if item.GetAccountType.Status == pgtype.Present {
-			jsonData[i].AccountType = item.GetAccountType()
-		}
-		if item.GetBalance.Status == pgtype.Present {
-			jsonData[i].Balance = float64(item.GetBalance().Int64()) * math.Pow(10, float64(item.Balance.Exp))
-		}
-		if item.GetAccountStatus.Status == pgtype.Present {
-			jsonData[i].AccountStatus = item.GetAccountStatus()
-		}
+		jsonData[i].AccountType = item.GetAccountType()
+		jsonData[i].Balance = item.GetBalance()
+		jsonData[i].AccountStatus = item.GetAccountStatus()
 	}
 
 	jsonBytes, err := json.Marshal(jsonData)
