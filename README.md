@@ -13,7 +13,7 @@ A simple banking system template that can be used by banks.
 7. Navigate to [localhost:8000](http://localhost:8000) and you can now log in to the employee account with the credentials from the SQL file.
 
 #### Option 2: Manual Setup
-1. Install Go v1.22+
+1. Install Go v1.23+
 2. Install Postgres 17
 3. Clone this repo and cd to the directory
 4. Log in and connect to psql by running `psql -h localhost -p 5432 -U postgres` in the command line (Note: psql may need to be added to PATH/be set in an environment variable)
