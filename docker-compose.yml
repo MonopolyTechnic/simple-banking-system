@@ -3,7 +3,7 @@ services:
     build: .
     restart: always
     ports:
-      - "8000:8000"
+      - "${PORT}:${PORT}"
     volumes:
       - .:/usr/src/app
     environment:
@@ -25,4 +25,4 @@ services:
     image: adminer
     restart: always
     ports:
-      - "8001:8080"
+      - "${ADMIN_PORT}:8080"
