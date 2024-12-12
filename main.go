@@ -1401,7 +1401,7 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 			jsonData[i].SecondaryCustomerID = int32(item.GetSecondaryCustomerID())
 		}
 		jsonData[i].AccountType = item.GetAccountType()
-		jsonData[i].Balance = float64(item.GetBalance()) * math.Pow(10, float64(item.GetBalance()))
+		jsonData[i].Balance = item.GetBalance()
 		jsonData[i].AccountStatus = item.GetAccountStatus()
 	}
 
