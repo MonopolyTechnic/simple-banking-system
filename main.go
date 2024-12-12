@@ -845,7 +845,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 			return errors.New("Invalid credentials")
 		}
 		// Check the password against its hash
-		err := bcrypt.CompareHashAndPassword(res[0].PasswordHash.Bytes, []byte(r.FormValue("password")))
+		err := bcrypt.CompareHashAndPassword(res[0].GetPasswordHash(), []byte(r.FormValue("password")))
 		if err != nil {
 			return errors.New("Invalid credentials")
 		}
@@ -868,11 +868,11 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	handle(err)
 	attemptSession.Values["data"] = &LogInAttemptCookie{
 		Email:          r.FormValue("email"),
-		FirstName:      res[0].FirstName.String,
-		ProfileType:    res[0].ProfileType.String,
-		PhoneNumber:    res[0].PhoneNumber.String,
-		PhoneCarrier:   res[0].PhoneCarrier.String,
-		MaskedPassword: res[0].MaskedPassword.String,
+		FirstName:      res[0].GetFirstName(),
+		ProfileType:    res[0].GetProfileType(),
+		PhoneNumber:    res[0].GetPhoneNumber(),
+		PhoneCarrier:   res[0].GetPhoneCarrier(),
+		MaskedPassword: res[0].GetMaskedPassword(),
 	}
 	attemptSession.Options.MaxAge = 30 * 60 // 30 minutes
 	err = attemptSession.Save(r, w)
@@ -910,7 +910,7 @@ func twofa(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			twofaSession.Values["actualCode"] = actualCode // Store the code in the session
-			// log.Println(actualCode)
+			log.Println(actualCode)
 			err = twofaSession.Save(r, w) // Save the session
 			handle(err)
 		}
@@ -1396,23 +1396,23 @@ func listAccounts(w http.ResponseWriter, r *http.Request) {
 
 	jsonData := make([]JSONAccount, len(accountData))
 	for i, item := range accountData {
-		if item.AccountNumber.Status == pgtype.Present {
-			jsonData[i].AccountNumber = item.AccountNumber.String
+		if item.GetAccountNumber.Status == pgtype.Present {
+			jsonData[i].AccountNumber = item.GetAccountNumber()
 		}
-		if item.PrimaryCustomerID.Status == pgtype.Present {
-			jsonData[i].PrimaryCustomerID = item.PrimaryCustomerID.Int
+		if item.GetPrimaryCustomerID.Status == pgtype.Present {
+			jsonData[i].PrimaryCustomerID = item.GetPrimaryCustomerID()
 		}
-		if item.SecondaryCustomerID.Status == pgtype.Present {
-			jsonData[i].SecondaryCustomerID = item.SecondaryCustomerID.Int
+		if item.GetSecondaryCustomerID.Status == pgtype.Present {
+			jsonData[i].SecondaryCustomerID = item.GetSecondaryCustomerID()
 		}
-		if item.AccountType.Status == pgtype.Present {
-			jsonData[i].AccountType = item.AccountType.String
+		if item.GetAccountType.Status == pgtype.Present {
+			jsonData[i].AccountType = item.GetAccountType()
 		}
-		if item.Balance.Status == pgtype.Present {
-			jsonData[i].Balance = float64(item.Balance.Int.Int64()) * math.Pow(10, float64(item.Balance.Exp))
+		if item.GetBalance.Status == pgtype.Present {
+			jsonData[i].Balance = float64(item.GetBalance().Int64()) * math.Pow(10, float64(item.Balance.Exp))
 		}
-		if item.AccountStatus.Status == pgtype.Present {
-			jsonData[i].AccountStatus = item.AccountStatus.String
+		if item.GetAccountStatus.Status == pgtype.Present {
+			jsonData[i].AccountStatus = item.GetAccountStatus()
 		}
 	}
 

@@ -3,7 +3,16 @@
 A simple banking system template that can be used by banks.
 
 ### Setup
+#### Option 1: Docker
+1. Install and configure [Docker](https://www.docker.com/products/docker-desktop/).
+2. Clone and navigate to the project repository.
+3. Copy the `.env.example` file into a new file called `.env` and fill in the specified variables.
+4. Run `docker compose up` to start the server.
+5. Access the database at [localhost:8001](http://localhost:8001) and sign in using your previously set credentials
+6. Paste in the SQL command from `docker_employee.sql` to create the employee/administrator user.
+7. Navigate to [localhost:8000](http://localhost:8000) and you can now log in to the employee account with the credentials from the SQL file.
 
+#### Option 2: Manual Setup
 1. Install Go v1.22+
 2. Install Postgres 17
 3. Clone this repo and cd to the directory
