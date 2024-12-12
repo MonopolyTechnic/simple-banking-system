@@ -14,7 +14,7 @@ services:
     restart: always
     shm_size: 128mb
     environment:
-      - POSGRES_USER=${DB_USERNAME}
+      - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
 
